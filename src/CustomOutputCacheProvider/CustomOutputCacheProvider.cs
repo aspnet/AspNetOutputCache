@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Web.Caching;
 
-namespace CustomOutputCacheProvider {
+namespace Microsoft.AspNet.OutputCache.CustomOutputCacheProvider {
 
     public class CustomOutputCacheItem {
         public object Obj;

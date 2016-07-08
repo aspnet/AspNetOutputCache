@@ -8,7 +8,7 @@
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Microsoft.AspNet.OutputCache</RootNamespace>
-    <AssemblyName>Microsoft.AspNet.OutputCache</AssemblyName>
+    <AssemblyName>Microsoft.AspNet.OutputCache.OutputCacheProviderAsync</AssemblyName>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SccProjectName>SAK</SccProjectName>

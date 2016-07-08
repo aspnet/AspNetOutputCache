@@ -7,8 +7,8 @@
     <ProjectGuid>{A8F3E399-BCAF-4F3E-BC16-5CA98A779916}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CustomOutputCacheProvider</RootNamespace>
-    <AssemblyName>CustomOutputCacheProvider</AssemblyName>
+    <RootNamespace>Microsoft.AspNet.OutputCache.CustomOutputCacheProvider</RootNamespace>
+    <AssemblyName>Microsoft.AspNet.OutputCache.CustomOutputCacheProvider</AssemblyName>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SccProjectName>SAK</SccProjectName>

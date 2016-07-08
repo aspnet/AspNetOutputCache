@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">
+
+  <system.webServer>
+    <modules>
+      <remove name="OutputCache" xdt:Transform="Remove" xdt:Locator="Match(name)" />
+      <add name="OutputCache"
+            type="Microsoft.AspNet.OutputCache.OutputCacheModuleAsync, Microsoft.AspNet.OutputCache"
+           preCondition="integratedMode" xdt:Transform="Remove" xdt:Locator="Match(type)" />
+    </modules>
+  </system.webServer>
+</configuration>

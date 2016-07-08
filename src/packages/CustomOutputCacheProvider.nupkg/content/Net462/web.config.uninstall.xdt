@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">
+ <system.web>
+     <caching>
+      <outputCache defaultProvider="CustomOutputCacheProvider" xdt:Transform="Remove"> 
+        <providers>
+          <add name="CustomOutputCacheProvider"
+              type="Microsoft.AspNet.OutputCache.CustomOutputCacheProvider, CustomOutputCacheProvider"
+              xdt:Transform="Remove" xdt:Locator="Match(type)"  />
+        </providers>
+      </outputCache>
+    </caching>
+  </system.web>
+</configuration>

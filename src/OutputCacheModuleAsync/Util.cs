@@ -5,7 +5,7 @@
     using System.Globalization;
     using System.Security.Cryptography;
 
-    public class InvariantComparer : IComparer {
+    internal class InvariantComparer : IComparer {
         private readonly CompareInfo _mCompareInfo;
         public static InvariantComparer Default = new InvariantComparer();
 
@@ -22,36 +22,7 @@
         }
     }
 
-    public class CryptoUtil {
-        /// <summary>
-        /// Computes the SHA256 hash of a given input.
-        /// </summary>
-        /// <param Name="input">The input over which to compute the hash.</param>
-        /// <param name="input"></param>
-        /// <returns>The binary hash (32 bytes) of the input.</returns>
-        public static byte[] ComputeSha256Hash(byte[] input) {
-            return ComputeSha256Hash(input, 0, input.Length);
-        }
-
-        /// <summary>
-        /// Computes the SHA256 hash of a given segment in a buffer.
-        /// </summary>
-        /// <param Name="buffer">The buffer over which to compute the hash.</param>
-        /// <param Name="offset">The offset at which to begin computing the hash.</param>
-        /// <param Name="count">The number of bytes in the buffer to include in the hash.</param>
-        /// <param name="buffer"></param>
-        /// <param name="offset"></param>
-        /// <param name="count"></param>
-        /// <returns>The binary hash (32 bytes) of the buffer segment.</returns>
-        public static byte[] ComputeSha256Hash(byte[] buffer, int offset, int count) {
-
-            using (SHA256 sha256 = new SHA256Cng()) {
-                return sha256.ComputeHash(buffer, offset, count);
-            }
-        }
-    }
-
-    public class HttpDate {
+    internal class HttpDate {
         private static readonly int[] s_tensDigit = {0, 10, 20, 30, 40, 50, 60, 70, 80, 90};
 
         private static int Atoi2(string s, int startIndex) {
@@ -130,7 +101,7 @@
             throw new FormatException("MakeMonthBadstring");
         }
 
-        public static DateTime UtcParse(string time) {
+        internal static DateTime UtcParse(string time) {
             int i;
             int year, month, day, hour, minute, second;
             if (time == null) {
@@ -193,7 +164,7 @@
         }
     }
 
-    public class HashCodeCombiner {
+    internal class HashCodeCombiner {
         private long _combinedHash;
 
         public HashCodeCombiner() {
@@ -229,7 +200,7 @@
         public int CombinedHash32 => _combinedHash.GetHashCode();
     }
 
-    public class StringUtil {
+    internal class StringUtil {
         public static bool StringArrayEquals(string[] a, string[] b) {
             if ((a == null) != (b == null)) {
                 return false;

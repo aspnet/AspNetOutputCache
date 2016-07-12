@@ -5,7 +5,7 @@ namespace Microsoft.AspNet.OutputCache {
     using System.Collections.Generic;
     using System.Web;
 
-    public class HttpCachePolicySettings {
+    internal class HttpCachePolicySettings {
         public HttpCacheability Cacheability { get; set; }
         public IEnumerable<KeyValuePair<HttpCacheValidateHandler, object>> ValidationCallbackInfo { get; set; }
         public bool IgnoreRangeRequests { get; set; }

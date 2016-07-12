@@ -2,7 +2,7 @@
     using System.Collections;
     using System.Collections.Specialized;
 
-    public class HttpRawResponse {
+    internal class HttpRawResponse {
         public int StatusCode { get; set; }
         public string StatusDescription { get; set; }
         public NameValueCollection Headers { get; set; }

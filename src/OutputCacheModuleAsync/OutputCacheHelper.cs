@@ -1,7 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-
-namespace Microsoft.AspNet.OutputCache {
+﻿namespace Microsoft.AspNet.OutputCache {
+    using System.Collections.Generic;
+    using System.Linq;
     using System;
     using System.Threading.Tasks;
     using System.Web.Caching;
@@ -281,6 +280,7 @@ namespace Microsoft.AspNet.OutputCache {
             if (response.HeadersWritten)
                 throw new HttpException("Cannot_use_snapshot_after_headers_sent");
             response.Clear();
+            response.ClearHeaders();
             // restore status
             response.StatusCode = rawResponse.StatusCode;
             response.StatusDescription = rawResponse.StatusDescription;
@@ -388,7 +388,7 @@ namespace Microsoft.AspNet.OutputCache {
             }
         }
 
-        public static async Task<string> CreateOutputCachedItemKey(
+        public static async Task<string> CreateOutputCachedItemKeyAsync(
             string path,
             string verb,
             HttpContext context,
@@ -522,9 +522,9 @@ namespace Microsoft.AspNet.OutputCache {
          * and form posted data.
          */
 
-        public static async Task<string> CreateOutputCachedItemKey(HttpContext context, CachedVary cachedVary) {
+        public static async Task<string> CreateOutputCachedItemKeyAsync(HttpContext context, CachedVary cachedVary) {
             return
-                await CreateOutputCachedItemKey(context.Request.Path, context.Request.HttpMethod, context, cachedVary);
+                await CreateOutputCachedItemKeyAsync(context.Request.Path, context.Request.HttpMethod, context, cachedVary);
         }
 
         /*
@@ -666,7 +666,7 @@ namespace Microsoft.AspNet.OutputCache {
             if (double.TryParse(s, NumberStyles.Float & ~NumberStyles.AllowLeadingSign & ~NumberStyles.AllowExponent,
                 CultureInfo.InvariantCulture, out d)) {
                 weight = (d >= 0 && d <= 1) ? d : 1;
-                    // if format is invalid, short-circut search by returning weight of 1
+                // if format is invalid, short-circut search by returning weight of 1
             }
             return weight;
         }

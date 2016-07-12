@@ -10,7 +10,7 @@
     <modules>
       <remove name="OutputCache" xdt:Transform="InsertIfMissing" xdt:Locator="Match(name)" />
       <add name="OutputCache"
-           type="Microsoft.AspNet.OutputCache.OutputCacheModuleAsync, Microsoft.AspNet.OutputCache"
+           type="Microsoft.AspNet.OutputCache.OutputCacheModuleAsync, Microsoft.AspNet.OutputCache.OutputCacheModuleAsync"
            preCondition="integratedMode" xdt:Transform="Insert" />
     </modules>
   </system.webServer>

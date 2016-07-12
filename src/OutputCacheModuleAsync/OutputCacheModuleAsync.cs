@@ -30,7 +30,7 @@
         public void Dispose() {}
 
         private IAsyncResult BeginOnResolveRequestCache(object source, EventArgs e, AsyncCallback cb, object extraData) {
-            return TaskAsyncHelper.BeginTask(() => OnEnter(source, e), cb, extraData);
+            return TaskAsyncHelper.BeginTask(() => OnEnterAsync(source, e), cb, extraData);
         }
 
         private static void EndOnResolveRequestCache(IAsyncResult result) {
@@ -38,14 +38,14 @@
         }
 
         private IAsyncResult BeginOnUpdateRequestCache(object source, EventArgs e, AsyncCallback cb, object extraData) {
-            return TaskAsyncHelper.BeginTask(() => OnLeave(source, e), cb, extraData);
+            return TaskAsyncHelper.BeginTask(() => OnLeaveAsync(source, e), cb, extraData);
         }
 
         private static void EndOnUpdateRequestCache(IAsyncResult result) {
             TaskAsyncHelper.EndTask(result);
         }
 
-        private async Task OnEnter(object source, EventArgs eventArgs) {
+        private async Task OnEnterAsync(object source, EventArgs eventArgs) {
             var app = (HttpApplication) source;
             HttpContext context = app.Context;
             HttpRequest request = context.Request;
@@ -56,7 +56,7 @@
             }
 
             // Create a lookup key. Also store the key in global parameter _key to be used inside OnLeave() later   
-            string key = _key = await OutputCacheHelper.CreateOutputCachedItemKey(context, null);
+            string key = _key = await OutputCacheHelper.CreateOutputCachedItemKeyAsync(context, null);
 
             // Lookup the cache vary using the key
             object item = await _outputCacheHelper.Get(key);
@@ -98,7 +98,7 @@
             app.CompleteRequest();
         }
 
-        private async Task OnLeave(object source, EventArgs eventArgs) {
+        private async Task OnLeaveAsync(object source, EventArgs eventArgs) {
             HttpContext context = ((HttpApplication) source).Context;
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
@@ -172,7 +172,7 @@
             string[] varyByParams = settings.IgnoreParams ? null : settings.VaryByParams;
             /* Create the key if it was not created in OnEnter */
             if (_key == null) {
-                _key = await OutputCacheHelper.CreateOutputCachedItemKey(context, null);
+                _key = await OutputCacheHelper.CreateOutputCachedItemKeyAsync(context, null);
                 Debug.Assert(_key != null, "_key != null");
             }
             if (settings.VaryByContentEncodings == null && varyByHeaders == null && varyByParams == null &&
@@ -215,7 +215,7 @@
                     VaryByAllParams = varyByAllParams,
                     VaryByCustom = settings.VaryByCustom
                 };
-                keyRawResponse = await OutputCacheHelper.CreateOutputCachedItemKey(context, cachedVary);
+                keyRawResponse = await OutputCacheHelper.CreateOutputCachedItemKeyAsync(context, cachedVary);
                 if (keyRawResponse == null) {
                     Debug.WriteLine("OutputCacheModuleLeave", "Couldn't add non-cacheable post.\n\tkey=" + _key);
                     return;
@@ -327,6 +327,9 @@
                  */
                 Debug.WriteLine("OutputCacheModuleEnter", "Hit, conditional request satisfied, status=304. Key=" + key +
                                                           ". Returning from OutputCacheModule::Enter");
+                if (response.HeadersWritten) {
+                    response.ClearHeaders();
+                }
                 response.Clear();
                 response.StatusCode = 304;
             }
@@ -361,14 +364,14 @@
                     string[] cacheDirectives = request.Headers["Cache-Control"].Split(s_fieldSeparators);
                     foreach (string directive in cacheDirectives) {
                         if (directive == "no-cache" || directive == "no-store") {
-                            Debug.WriteLine("OutputCacheModuleEnter",
+                            Debug.WriteLine("OutputCache Module Async Enter",
                                 "Skipping lookup because of Cache-Control: no-cache or no-store directive. Returning from OutputCacheModule::Enter");
                             return true;
                         }
                         if (directive.StartsWith("max-age=")) {
                             int maxage;
                             try {
-                                maxage = Convert.ToInt32(directive.Substring(8), CultureInfo.InvariantCulture);
+                                int.TryParse(directive.Substring(8), out maxage);
                             }
                             catch {
                                 maxage = -1;
@@ -494,7 +497,7 @@
                  *
                  * Skip this step if it's a VaryByNone vary policy.
                  */
-            string key = await OutputCacheHelper.CreateOutputCachedItemKey(context, cachedVary);
+            string key = await OutputCacheHelper.CreateOutputCachedItemKeyAsync(context, cachedVary);
             if (key == null) {
                 Debug.WriteLine("OutputCacheModuleEnter",
                     "Miss, key could not be created for vary-by item. Returning from OutputCacheModule::Enter");

@@ -16,7 +16,7 @@
         }
 
         public override Task SetAsync(string key, object entry, DateTime utcExpiry) {
-            return Task.Run(() => Set(key, entry, utcExpiry));
+             return Task.Run(() => Set(key, entry, utcExpiry));
         }
 
         public override Task RemoveAsync(string key) {
@@ -28,7 +28,8 @@
         }
 
         public override object Add(string key, object entry, DateTime utcExpiry) {
-            return _cache.Add(key, entry, utcExpiry) ? entry : null;
+            DateTimeOffset expiration = (utcExpiry == Cache.NoAbsoluteExpiration) ? ObjectCache.InfiniteAbsoluteExpiration : utcExpiry;           
+            return _cache.Add(key, entry, expiration) ? entry : null;
         }
 
         public void Add(string depKey, DependencyCacheEntryWrapper dcew, DateTimeOffset dateTimeOffsetValue) {
@@ -36,7 +37,8 @@
         }
 
         public override void Set(string key, object entry, DateTime utcExpiry) {
-            _cache.Set(key, entry, utcExpiry);
+            DateTimeOffset expiration = (utcExpiry == Cache.NoAbsoluteExpiration) ? ObjectCache.InfiniteAbsoluteExpiration : utcExpiry;
+            _cache.Set(key, entry, expiration);
         }
 
         public override void Remove(string key) {

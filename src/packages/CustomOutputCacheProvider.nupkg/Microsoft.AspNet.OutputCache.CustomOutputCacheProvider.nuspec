@@ -8,7 +8,6 @@
     <copyright>&#169; Microsoft Corporation. All rights reserved.</copyright>
     <dependencies>
       <dependency id="Microsoft.AspNet.OutputCache.OutputCacheModuleAsync" version="$OutputCacheModuleAsyncNuGetPackageVersion$" />
-      <dependency id="EntityFramework" version="$EntityFrameworkNuGetPackageVersion$" />
     </dependencies>    
     <title>Microsoft ASP.NET Custom OutputCache Providers</title>
     <description>Async version Custom OutputCache provider</description>

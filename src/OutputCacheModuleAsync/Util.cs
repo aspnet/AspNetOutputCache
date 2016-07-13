@@ -22,6 +22,35 @@
         }
     }
 
+    internal class CryptoUtil {
+        /// <summary>
+        /// Computes the SHA256 hash of a given input.
+        /// </summary>
+        /// <param Name="input">The input over which to compute the hash.</param>
+        /// <param name="input"></param>
+        /// <returns>The binary hash (32 bytes) of the input.</returns>
+        public static byte[] ComputeSha256Hash(byte[] input) {
+            return ComputeSha256Hash(input, 0, input.Length);
+        }
+
+        /// <summary>
+        /// Computes the SHA256 hash of a given segment in a buffer.
+        /// </summary>
+        /// <param Name="buffer">The buffer over which to compute the hash.</param>
+        /// <param Name="offset">The offset at which to begin computing the hash.</param>
+        /// <param Name="count">The number of bytes in the buffer to include in the hash.</param>
+        /// <param name="buffer"></param>
+        /// <param name="offset"></param>
+        /// <param name="count"></param>
+        /// <returns>The binary hash (32 bytes) of the buffer segment.</returns>
+        public static byte[] ComputeSha256Hash(byte[] buffer, int offset, int count) {
+
+            using (SHA256 sha256 = new SHA256Cng()) {
+                return sha256.ComputeHash(buffer, offset, count);
+            }
+        }
+    }
+
     internal class HttpDate {
         private static readonly int[] s_tensDigit = {0, 10, 20, 30, 40, 50, 60, 70, 80, 90};
 

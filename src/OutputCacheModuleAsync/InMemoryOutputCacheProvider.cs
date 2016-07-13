@@ -8,11 +8,11 @@
         private readonly MemoryCache _cache = new MemoryCache("Microsoft.AspNet.OutputCache Default In-Memory Provider");
 
         public override Task<object> GetAsync(string key) {
-            return Task.Run(() => Get(key));
+            return Task.FromResult(Get(key)); //.Run(() => Get(key));
         }
 
         public override Task<object> AddAsync(string key, object entry, DateTime utcExpiry) {
-            return Task.Run(() => Add(key, entry, utcExpiry));
+            return Task.FromResult(Add(key,entry,utcExpiry));//.Run(() => Add(key, entry, utcExpiry));
         }
 
         public override Task SetAsync(string key, object entry, DateTime utcExpiry) {

@@ -11,6 +11,9 @@
     using System.Diagnostics;
     using System.Configuration;
 
+    /// <summary>
+    /// OutputCache Async Module, this Module is able to use Async type of OutputCache Providers 
+    /// </summary>
     public class OutputCacheModuleAsync : IHttpModule {
         private const string Asterisk = "*";
         private static readonly char[] s_fieldSeparators = {',', ' '};
@@ -27,6 +30,9 @@
             app.AddOnUpdateRequestCacheAsync(BeginOnUpdateRequestCache, EndOnUpdateRequestCache);
         }
 
+        /// <summary>
+        /// Implement the IHTTPModule interface
+        /// </summary>
         public void Dispose() {}
 
         private IAsyncResult BeginOnResolveRequestCache(object source, EventArgs e, AsyncCallback cb, object extraData) {

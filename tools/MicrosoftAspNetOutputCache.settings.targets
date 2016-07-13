@@ -16,8 +16,7 @@
   </PropertyGroup>
 
   <PropertyGroup Label="NuGet package dependencies">
-    <OutputCacheAsyncModuleNuGetPackageVersion>1.0.0</OutputCacheAsyncModuleNuGetPackageVersion>
-    <EntityFrameworkNuGetPackageVersion>6.1.3</EntityFrameworkNuGetPackageVersion>
+    <OutputCacheModuleAsyncNuGetPackageVersion>1.0.0</OutputCacheModuleAsyncNuGetPackageVersion>
   </PropertyGroup>
 
   <!-- Default properties -->

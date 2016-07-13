@@ -1,4 +1,6 @@
-﻿namespace Microsoft.AspNet.OutputCache {
+﻿using System.IO;
+
+namespace Microsoft.AspNet.OutputCache {
     using System.Collections.Generic;
     using System.Linq;
     using System;
@@ -388,7 +390,7 @@
             }
         }
 
-        public static async Task<string> CreateOutputCachedItemKeyAsync(
+        public static string CreateOutputCachedItemKey(
             string path,
             string verb,
             HttpContext context,
@@ -494,13 +496,18 @@
                     return null;
                 }
                 if (contentLength > 0) {
-                    await request.InputStream.ReadAsync(null, 0, System.Convert.ToInt32(request.InputStream.Length));
-                    return null;
+                    using (var ms = new MemoryStream()) {
+                        request.InputStream.CopyTo(ms);
+                        byte[] buf = ms.ToArray();
+                        // Use SHA256 to generate a collision-free hash of the input data
+                        value = System.Convert.ToBase64String((CryptoUtil.ComputeSha256Hash(buf)));
+                        sb.Append(value);
+                    }
                 }
             }
             /*
-                 * VaryByContentEncoding
-                 */
+            * VaryByContentEncoding
+            */
             sb.Append("E");
             string[] contentEncodings = cachedVary.ContentEncodings;
             if (contentEncodings == null) {
@@ -522,9 +529,8 @@
          * and form posted data.
          */
 
-        public static async Task<string> CreateOutputCachedItemKeyAsync(HttpContext context, CachedVary cachedVary) {
-            return
-                await CreateOutputCachedItemKeyAsync(context.Request.Path, context.Request.HttpMethod, context, cachedVary);
+        public static string CreateOutputCachedItemKeyAsync(HttpContext context, CachedVary cachedVary) {
+            return CreateOutputCachedItemKey(context.Request.Path, context.Request.HttpMethod, context, cachedVary);
         }
 
         /*
@@ -553,7 +559,7 @@
                     }
                     acceptEncodingWithoutWeight = acceptEncoding.Substring(0, tokenEnd);
                     if (Math.Abs(ParseWeight(acceptEncoding, tokenEnd)) < 0) {
-                        // WOS 1985352 & WOS 1985353: weight is 0, use "identity" only if it is acceptable
+                        //weight is 0, use "identity" only if it is acceptable
                         bool identityIsAcceptable = acceptEncodingWithoutWeight != Identity &&
                                                     acceptEncodingWithoutWeight != Asterisk;
                         return (identityIsAcceptable) ? -1 : -2;

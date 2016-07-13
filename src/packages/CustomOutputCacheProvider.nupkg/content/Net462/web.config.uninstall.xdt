@@ -5,7 +5,7 @@
       <outputCache defaultProvider="CustomOutputCacheProvider" xdt:Transform="Remove"> 
         <providers>
           <add name="CustomOutputCacheProvider"
-              type="Microsoft.AspNet.OutputCache.CustomOutputCacheProvider, CustomOutputCacheProvider"
+              type="Microsoft.AspNet.OutputCache.CustomOutputCacheProvider.CustomOutputCacheProvider, Microsoft.AspNet.OutputCache.CustomOutputCacheProvider"
               xdt:Transform="Remove" xdt:Locator="Match(type)"  />
         </providers>
       </outputCache>

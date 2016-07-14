@@ -1,4 +1,6 @@
-﻿namespace Microsoft.AspNet.OutputCache {
+﻿using System.Text;
+
+namespace Microsoft.AspNet.OutputCache {
     using System.Collections.Generic;
     using System;
     using System.Linq;
@@ -10,7 +12,7 @@
     using System.Web.Configuration;
     using System.Diagnostics;
     using System.Configuration;
-
+    using Resource;
     /// <summary>
     /// OutputCache Async Module, this Module is able to use Async type of OutputCache Providers 
     /// </summary>
@@ -62,7 +64,7 @@
             }
 
             // Create a lookup key. Also store the key in global parameter _key to be used inside OnLeave() later   
-            string key = _key = await OutputCacheHelper.CreateOutputCachedItemKeyAsync(context, null);
+            string key = _key = OutputCacheHelper.CreateOutputCachedItemKeyAsync(context, null);
 
             // Lookup the cache vary using the key
             object item = await _outputCacheHelper.Get(key);
@@ -178,7 +180,7 @@
             string[] varyByParams = settings.IgnoreParams ? null : settings.VaryByParams;
             /* Create the key if it was not created in OnEnter */
             if (_key == null) {
-                _key = await OutputCacheHelper.CreateOutputCachedItemKeyAsync(context, null);
+                _key = OutputCacheHelper.CreateOutputCachedItemKeyAsync(context, null);
                 Debug.Assert(_key != null, "_key != null");
             }
             if (settings.VaryByContentEncodings == null && varyByHeaders == null && varyByParams == null &&
@@ -221,16 +223,16 @@
                     VaryByAllParams = varyByAllParams,
                     VaryByCustom = settings.VaryByCustom
                 };
-                keyRawResponse = await OutputCacheHelper.CreateOutputCachedItemKeyAsync(context, cachedVary);
+                keyRawResponse = OutputCacheHelper.CreateOutputCachedItemKeyAsync(context, cachedVary);
                 if (keyRawResponse == null) {
-                    Debug.WriteLine("OutputCacheModuleLeave", "Couldn't add non-cacheable post.\n\tkey=" + _key);
+                    Debug.WriteLine(SR.OutputCacheModuleLeave, string.Format(SR.Couldnot_add_non_cacheable_post,_key));
                     return;
                 }
                 // it is possible that the user code calculating custom vary-by
                 // string would Flush making the response non-cacheable. Check fo it here.
                 if (response.HeadersWritten) {
-                    Debug.WriteLine("OutputCacheModuleLeave",
-                        "Response.Flush() inside GetVaryByCustomstring\n\tkey=" + _key);
+                    Debug.WriteLine(SR.OutputCacheModuleLeave,
+                        string.Format(SR.Response_Flush_inside_GetVaryByCustomstring, _key));
                     return;
                 }
             }
@@ -260,7 +262,7 @@
                     KernelCacheUrl = kernelCacheUrl,
                     CachedVaryId = cachedVaryId
                 };
-                Debug.WriteLine("OutputCacheModuleLeave", "Adding response to cache. Key=" + keyRawResponse);
+                Debug.WriteLine(SR.OutputCacheModuleLeave, string.Format(SR.Adding_response_to_cache, keyRawResponse));
                 CacheDependency dep = OutputCacheUtility.CreateCacheDependency(context.Response);
                 try {
                     await _outputCacheHelper.InsertResponse(_key, cachedVary,
@@ -303,8 +305,8 @@
                         }
                     }
                     catch {
-                        Debug.WriteLine("OutputCacheModuleEnter",
-                            "Ignore If-Modified-Since header, invalid format: " + ifModifiedSinceHeader);
+                        Debug.WriteLine(SR.OutputCacheModuleEnter,
+                            string.Format(SR.Ignore_IfModifiedSince_header, ifModifiedSinceHeader));
                     }
                 }
                 /* Check "If-None-Match" header */
@@ -331,8 +333,7 @@
                 /*
                  * Send 304 Not Modified
                  */
-                Debug.WriteLine("OutputCacheModuleEnter", "Hit, conditional request satisfied, status=304. Key=" + key +
-                                                          ". Returning from OutputCacheModule::Enter");
+                Debug.WriteLine(SR.OutputCacheModuleEnter, string.Format(SR.Hit_conditional_request_satisfied,key) +"OutputCacheModule::Enter");
                 if (response.HeadersWritten) {
                     response.ClearHeaders();
                 }
@@ -370,8 +371,8 @@
                     string[] cacheDirectives = request.Headers["Cache-Control"].Split(s_fieldSeparators);
                     foreach (string directive in cacheDirectives) {
                         if (directive == "no-cache" || directive == "no-store") {
-                            Debug.WriteLine("OutputCache Module Async Enter",
-                                "Skipping lookup because of Cache-Control: no-cache or no-store directive. Returning from OutputCacheModule::Enter");
+                            Debug.WriteLine(SR.OutputCacheModuleEnter,
+                                SR.Skipping_lookup_because_of_Cache_Control_no_cache_or_no_store_directive + "OutputCacheModule::Enter");
                             return true;
                         }
                         if (directive.StartsWith("max-age=")) {
@@ -393,8 +394,8 @@
                             if (age < maxage) {
                                 continue;
                             }
-                            Debug.WriteLine("OutputCacheModuleEnter",
-                                "Not returning found item due to Cache-Control: max-age directive. Returning from OutputCacheModule::Enter");
+                            Debug.WriteLine(SR.OutputCacheModuleEnter,
+                                SR.Not_returning_found_item_due_to_Cache_Control_max_age_directive + "OutputCacheModule::Enter");
                             return true;
                         }
                         if (!directive.StartsWith("min-fresh=")) {
@@ -416,8 +417,8 @@
                         if (fresh >= minfresh) {
                             continue;
                         }
-                        Debug.WriteLine("OutputCacheModuleEnter",
-                            "Not returning found item due to Cache-Control: min-fresh directive. Returning from OutputCacheModule::Enter");
+                        Debug.WriteLine(SR.OutputCacheModuleEnter,
+                           SR.Not_returning_found_item_due_to_Cache_Control_min_fresh_directive + "OutputCacheModule::Enter");
                         return true;
                     }
                 }
@@ -429,8 +430,8 @@
                 if (!pragmaDirectives.Any(t => t == null || t == "no-cache")) {
                     return false;
                 }
-                Debug.WriteLine("OutputCacheModuleEnter",
-                    "Skipping lookup because of Pragma: no-cache directive. Returning from OutputCacheModule::Enter");
+                Debug.WriteLine(SR.OutputCacheModuleEnter,
+                   SR.Skipping_lookup_because_of_Pragma_no_cache_directive + " OutputCacheModule::Enter");
                 return true;
             }
             if (settings.ValidationCallbackInfo == null || !settings.ValidationCallbackInfo.Any()) {
@@ -445,9 +446,8 @@
                 vci.Key(context, vci.Value, ref validationStatus);
                 switch (validationStatus) {
                     case HttpValidationStatus.Invalid:
-                        Debug.WriteLine("OutputCacheModuleEnter",
-                            "Output cache item found but callback invalidated it. key=" + key +
-                            ". Returning from OutputCacheModule::Enter");
+                        Debug.WriteLine(SR.OutputCacheModuleEnter,
+                          string.Format(SR.Output_cache_item_found_but_callback_invalidated_it,key) + " OutputCacheModule::Enter");
 
                         await _outputCacheHelper.Remove(key, context);
                         return true;
@@ -457,18 +457,16 @@
                     case HttpValidationStatus.Valid:
                         break;
                     default:
-                        Debug.WriteLine("OutputCacheModuleEnter",
-                            "Invalid validation status, ignoring it, status=" + validationStatus +
-                            ". Key=" + key);
+                        Debug.WriteLine(SR.OutputCacheModuleEnter,
+                            string.Format(SR.Invalid_validation_status, validationStatus, key));
                         validationStatus = validationStatusFinal;
                         break;
                 }
             }
 
             if (validationStatusFinal == HttpValidationStatus.IgnoreThisRequest) {
-                Debug.WriteLine("OutputCacheModuleEnter",
-                    "Output cache item found but callback status is IgnoreThisRequest. Key=" + key +
-                    ". Returning from OutputCacheModule::Enter");
+                Debug.WriteLine(SR.OutputCacheModuleEnter,
+                   string.Format(SR.Callback_status_is_IgnoreThisRequest, key) + " OutputCacheModule::Enter");
                 return true;
             }
 
@@ -485,7 +483,8 @@
                 case "POST":
                     break;
                 default:
-                    Debug.WriteLine("Http method not GET, POST, or HEAD. Returning from OutputCacheModule::Enter");
+                    Debug.WriteLine("Http "
+                        +SR.method_is_not + "GET, POST, or HEAD."+ SR.Returning_from + " OutputCacheModule::Enter");
                     return false;
             }
             return true;
@@ -503,10 +502,10 @@
                  *
                  * Skip this step if it's a VaryByNone vary policy.
                  */
-            string key = await OutputCacheHelper.CreateOutputCachedItemKeyAsync(context, cachedVary);
+            string key = OutputCacheHelper.CreateOutputCachedItemKeyAsync(context, cachedVary);
             if (key == null) {
-                Debug.WriteLine("OutputCacheModuleEnter",
-                    "Miss, key could not be created for vary-by item. Returning from OutputCacheModule::Enter");
+                Debug.WriteLine(SR.OutputCacheModuleEnter,
+                   string.Format(SR.Miss_key_could_not_be_created_for_varyby_item,"Vary-By") + " OutputCacheModule::Enter");
                 return new CachedItem {DoReturn = true, Item = null};
             }
             if (cachedVary.ContentEncodings == null) {
@@ -563,15 +562,15 @@
             if (cachedVary == null && !settings.IgnoreParams) {
                 // This cached output has no vary policy, so make sure it doesn't have a query string or form post.
                 if (request.HttpMethod == "POST") {
-                    Debug.WriteLine("OutputCacheModuleEnter",
-                        "Output cache item found but method is POST and no VaryByParam specified. Key=" + key +
-                        ". Returning from OutputCacheModule::Enter");
+                    Debug.WriteLine(SR.OutputCacheModuleEnter,
+                       string.Format(SR.Method_is_POST_and_no_VaryByParam_specified, "POST", "VaryByParam", key) +
+                        " OutputCacheModule::Enter");
                     return true;
                 }
                 if (request.QueryString.Count > 0) {
-                    Debug.WriteLine("OutputCacheModuleEnter",
-                        "Output cache item found but contains a querystring and no VaryByParam specified. Key=" + key +
-                        ". Returning from OutputCacheModule::Enter");
+                    Debug.WriteLine(SR.OutputCacheModuleEnter,
+                       string.Format(SR.Contains_querystring_and_no_VaryByParam_specified, " querystring ", " VaryByParam ", key) +
+                        " OutputCacheModule::Enter");
                     return true;
                 }
             }
@@ -582,9 +581,9 @@
             if (!rangeHeader.StartsWith("bytes", StringComparison.OrdinalIgnoreCase)) {
                 return false;
             }
-            Debug.WriteLine("OutputCacheModuleEnter",
-                "Output cache item found but this is a Range request and IgnoreRangeRequests is true. Key=" + key +
-                ". Returning from OutputCacheModule::Enter");
+            Debug.WriteLine(SR.OutputCacheModuleEnter,
+               string.Format(SR.Range_request_and_IgnoreRangeRequests_is_true, " Range request ", " IgnoreRangeRequests ", key) +
+                " OutputCacheModule::Enter");
             // Don't record this as a cache miss. The response for a range request is not cached, and so
             // we don't want to pollute the cache hit/miss ratio.
             return true;

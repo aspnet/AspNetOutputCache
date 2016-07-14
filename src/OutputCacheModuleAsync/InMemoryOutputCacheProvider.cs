@@ -3,24 +3,26 @@
     using System.Runtime.Caching;
     using System.Threading.Tasks;
     using System.Web.Caching;
-
+    using Microsoft.AspNet.OutputCache.Resource;
     internal class InMemoryOutputCacheProvider : OutputCacheProviderAsync {
-        private readonly MemoryCache _cache = new MemoryCache("Microsoft.AspNet.OutputCache Default In-Memory Provider");
+         private readonly MemoryCache _cache = new MemoryCache(SR.Microsoft_AspNet_OutputCache_Default_InMemory_Provider);
 
         public override Task<object> GetAsync(string key) {
-            return Task.FromResult(Get(key)); //.Run(() => Get(key));
+            return Task.FromResult(Get(key)); 
         }
 
         public override Task<object> AddAsync(string key, object entry, DateTime utcExpiry) {
-            return Task.FromResult(Add(key,entry,utcExpiry));//.Run(() => Add(key, entry, utcExpiry));
+            return Task.FromResult(Add(key,entry,utcExpiry));
         }
 
         public override Task SetAsync(string key, object entry, DateTime utcExpiry) {
-             return Task.Run(() => Set(key, entry, utcExpiry));
+            Set(key, entry, utcExpiry);
+            return Task.CompletedTask;
         }
 
-        public override Task RemoveAsync(string key) {
-            return Task.Run(() => Remove(key));
+        public override Task RemoveAsync(string key) { 
+            Remove(key);
+            return Task.CompletedTask;
         }
 
         public override object Get(string key) {

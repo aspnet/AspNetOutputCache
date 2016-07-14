@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using Microsoft.AspNet.OutputCache.Resource;
 
 namespace Microsoft.AspNet.OutputCache {
     using System.Collections.Generic;
@@ -204,7 +205,7 @@ namespace Microsoft.AspNet.OutputCache {
                                    && slidingExpiration == Cache.NoSlidingExpiration
                                    && (dependencies == null || dependencies.GetFileDependencies() != null));
             if (!canUseProvider) {
-                throw new Exception("Provider_does_not_support_policy_for_responses");
+                throw new Exception(SR.Provider_does_not_support_policy_for_responses);
             }
             if (cachedVary != null) {
                 /*
@@ -280,7 +281,7 @@ namespace Microsoft.AspNet.OutputCache {
 
         public static void UseSnapshot(HttpRawResponse rawResponse, bool sendBody, HttpResponse response) {
             if (response.HeadersWritten)
-                throw new HttpException("Cannot_use_snapshot_after_headers_sent");
+                throw new HttpException(SR.Cannot_use_snapshot_after_headers_sent);
             response.Clear();
             response.ClearHeaders();
             // restore status
@@ -299,7 +300,7 @@ namespace Microsoft.AspNet.OutputCache {
             var headers = new NameValueCollection();
             const bool hasSubstBlocks = false;
             if (response.HeadersWritten)
-                throw new HttpException("Cannot_get_snapshot_if_not_buffered");
+                throw new HttpException(SR.Cannot_get_snapshot_if_not_buffered);
             // data
             ArrayList buffers = OutputCacheUtility.GetContentBuffers(response);
             // headers (after data as the data has side effects (like charset, see ASURT 113202))    

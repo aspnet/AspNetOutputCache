@@ -1,4 +1,5 @@
 ﻿namespace Microsoft.AspNet.OutputCache {
+    using Resource;
     using System;
     using System.Threading.Tasks;
 
@@ -45,14 +46,14 @@
         // and we expect that most consumers will end up invoking this method via an instance of that delegate.
         public static void EndTask(IAsyncResult ar) {
             if (ar == null) {
-                throw new ArgumentNullException("ar");
+                throw new ArgumentNullException(nameof(ar));
             }
 
             // Make sure the incoming parameter is actually the correct type.
-            TaskWrapperAsyncResult taskWrapper = ar as TaskWrapperAsyncResult;
+            var taskWrapper = ar as TaskWrapperAsyncResult;
             if (taskWrapper == null) {
                 // extraction failed
-                throw new ArgumentException("The provided IAsyncResult is invalid.", "ar");
+                throw new ArgumentException(string.Format(SR.The_provided_IAsyncResult_is_invalid,"IAsyncResult"));
             }
             // The End* method doesn't actually perform any actual work, but we do need to maintain two invariants:
             // 1. Make sure the underlying Task actually *is* complete.

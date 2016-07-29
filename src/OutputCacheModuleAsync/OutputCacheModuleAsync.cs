@@ -64,11 +64,11 @@ namespace Microsoft.AspNet.OutputCache {
             }
 
             // Create a lookup key. Also store the key in global parameter _key to be used inside OnLeave() later   
-            string key = _key = OutputCacheHelper.CreateOutputCachedItemKeyAsync(context, null);
+            string key = _key = OutputCacheHelper.CreateOutputCachedItemKey(context, null);
 
             // Lookup the cache vary using the key
-            object item = await _outputCacheHelper.Get(key);
-            if (await _outputCacheHelper.Get(key) == null) {
+            object item = await _outputCacheHelper.GetAsync(key);
+            if (item == null) {
                 return;
             }
             // 'item' may be one of the following:
@@ -87,7 +87,7 @@ namespace Microsoft.AspNet.OutputCache {
                 return;
             }
 
-            if (await CheckHeadersToDetermineAcceptCachedCopy(key, settings, request, context)) {
+            if (await CheckHeadersToDetermineAcceptCachedCopyAsync(key, settings, request, context)) {
                 return;
             }
 
@@ -114,7 +114,7 @@ namespace Microsoft.AspNet.OutputCache {
             if (!IsResponseCacheable(response, request, context)) {
                 return;
             }
-            await CacheResponse(context, response);
+            await CacheResponseAsync(context, response);
             _key = null;
         }
 
@@ -167,7 +167,7 @@ namespace Microsoft.AspNet.OutputCache {
                        cache.VaryByContentEncodings.GetContentEncodings());
         }
 
-        private async Task CacheResponse(HttpContext context, HttpResponse response) {
+        private async Task CacheResponseAsync(HttpContext context, HttpResponse response) {
             CachedVary cachedVary;
             string keyRawResponse;
             /*
@@ -180,7 +180,7 @@ namespace Microsoft.AspNet.OutputCache {
             string[] varyByParams = settings.IgnoreParams ? null : settings.VaryByParams;
             /* Create the key if it was not created in OnEnter */
             if (_key == null) {
-                _key = OutputCacheHelper.CreateOutputCachedItemKeyAsync(context, null);
+                _key = OutputCacheHelper.CreateOutputCachedItemKey(context, null);
                 Debug.Assert(_key != null, "_key != null");
             }
             if (settings.VaryByContentEncodings == null && varyByHeaders == null && varyByParams == null &&
@@ -223,7 +223,7 @@ namespace Microsoft.AspNet.OutputCache {
                     VaryByAllParams = varyByAllParams,
                     VaryByCustom = settings.VaryByCustom
                 };
-                keyRawResponse = OutputCacheHelper.CreateOutputCachedItemKeyAsync(context, cachedVary);
+                keyRawResponse = OutputCacheHelper.CreateOutputCachedItemKey(context, cachedVary);
                 if (keyRawResponse == null) {
                     Debug.WriteLine(SR.OutputCacheModuleLeave, string.Format(SR.Couldnot_add_non_cacheable_post,_key));
                     return;
@@ -265,7 +265,7 @@ namespace Microsoft.AspNet.OutputCache {
                 Debug.WriteLine(SR.OutputCacheModuleLeave, string.Format(SR.Adding_response_to_cache, keyRawResponse));
                 CacheDependency dep = OutputCacheUtility.CreateCacheDependency(context.Response);
                 try {
-                    await _outputCacheHelper.InsertResponse(_key, cachedVary,
+                    await _outputCacheHelper.InsertResponseAsync(_key, cachedVary,
                         keyRawResponse, cachedRawResponse,
                         dep,
                         utcExpires, slidingDelta);
@@ -364,7 +364,7 @@ namespace Microsoft.AspNet.OutputCache {
             return OutputCacheHelper.IsAcceptableEncoding(contentEncoding, acceptEncoding);
         }
 
-        private async Task<bool> CheckHeadersToDetermineAcceptCachedCopy(string key, HttpCachePolicySettings settings,
+        private async Task<bool> CheckHeadersToDetermineAcceptCachedCopyAsync(string key, HttpCachePolicySettings settings,
             HttpRequest request, HttpContext context) {
             if (!settings.HasValidationPolicy()) {
                 if (request.Headers["Cache-Control"] != null) {
@@ -449,7 +449,7 @@ namespace Microsoft.AspNet.OutputCache {
                         Debug.WriteLine(SR.OutputCacheModuleEnter,
                           string.Format(SR.Output_cache_item_found_but_callback_invalidated_it,key) + " OutputCacheModule::Enter");
 
-                        await _outputCacheHelper.Remove(key, context);
+                        await _outputCacheHelper.RemoveAsync(key, context);
                         return true;
                     case HttpValidationStatus.IgnoreThisRequest:
                         validationStatusFinal = HttpValidationStatus.IgnoreThisRequest;
@@ -502,7 +502,7 @@ namespace Microsoft.AspNet.OutputCache {
                  *
                  * Skip this step if it's a VaryByNone vary policy.
                  */
-            string key = OutputCacheHelper.CreateOutputCachedItemKeyAsync(context, cachedVary);
+            string key = OutputCacheHelper.CreateOutputCachedItemKey(context, cachedVary);
             if (key == null) {
                 Debug.WriteLine(SR.OutputCacheModuleEnter,
                    string.Format(SR.Miss_key_could_not_be_created_for_varyby_item,"Vary-By") + " OutputCacheModule::Enter");
@@ -511,7 +511,7 @@ namespace Microsoft.AspNet.OutputCache {
             if (cachedVary.ContentEncodings == null) {
                 // With the new key, look up the in-memory key.
                 // At this point, we've exhausted the lookups in memory for this item.
-                item = await _outputCacheHelper.Get(key);
+                item = await _outputCacheHelper.GetAsync(key);
             }
             else {
                 bool identityIsAcceptable = true;
@@ -526,7 +526,7 @@ namespace Microsoft.AspNet.OutputCache {
                         if (index > -1) {
                             identityIsAcceptable = false;
                             // the client Accept-Encoding header contains an encoding that's in the VaryByContentEncoding list
-                            item = await _outputCacheHelper.Get(key + contentEncodings[index]);
+                            item = await _outputCacheHelper.GetAsync(key + contentEncodings[index]);
                             if (item != null) {
                                 continue;
                             }
@@ -543,7 +543,7 @@ namespace Microsoft.AspNet.OutputCache {
                 }
                 // the identity should not be used if the client Accept-Encoding contains an entry in the VaryByContentEncoding list or "identity" is not acceptable
                 if (item == null && identityIsAcceptable) {
-                    item = await _outputCacheHelper.Get(key);
+                    item = await _outputCacheHelper.GetAsync(key);
                 }
             }
             if (item != null && ((CachedRawResponse) item).CachedVaryId == cachedVary.CachedVaryId) {
@@ -551,7 +551,7 @@ namespace Microsoft.AspNet.OutputCache {
             }
             if (item != null) {
                 // explicitly remove entry because _cachedVaryId does not match
-                await _outputCacheHelper.Remove(key, context);
+                await _outputCacheHelper.RemoveAsync(key, context);
             }
             return new CachedItem {DoReturn = true, Item = item};
         }

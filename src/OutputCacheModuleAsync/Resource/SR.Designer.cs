@@ -178,6 +178,15 @@ namespace Microsoft.AspNet.OutputCache.Resource {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to No UniqueId Cache Dependency.
+        /// </summary>
+        internal static string No_UniqueId_Cache_Dependency {
+            get {
+                return ResourceManager.GetString("No_UniqueId_Cache_Dependency", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Not returning found item due to Cache-Control: max-age directive. Returning from.
         /// </summary>
         internal static string Not_returning_found_item_due_to_Cache_Control_max_age_directive {
@@ -241,7 +250,7 @@ namespace Microsoft.AspNet.OutputCache.Resource {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Response.Flush() inside GetVaryByCustomstring key =&apos;{0}&apos;.
+        ///   Looks up a localized string similar to Response.Flush() inside GetAsyncVaryByCustomstring key =&apos;{0}&apos;.
         /// </summary>
         internal static string Response_Flush_inside_GetVaryByCustomstring {
             get {

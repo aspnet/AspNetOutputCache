@@ -178,7 +178,7 @@
     <value>Output cache item found but this is a {0} and {1} is true. Key='{2}'. Returning from</value>
   </data>
   <data name="Response_Flush_inside_GetVaryByCustomstring" xml:space="preserve">
-    <value>Response.Flush() inside GetVaryByCustomstring key ='{0}'</value>
+    <value>Response.Flush() inside GetAsyncVaryByCustomstring key ='{0}'</value>
   </data>
   <data name="Returning_from" xml:space="preserve">
     <value>Returning from</value>
@@ -191,5 +191,8 @@
   </data>
   <data name="The_provided_IAsyncResult_is_invalid" xml:space="preserve">
     <value>The provided {0} is invalid.</value>
+  </data>
+  <data name="No_UniqueId_Cache_Dependency" xml:space="preserve">
+    <value>No UniqueId Cache Dependency</value>
   </data>
 </root>

@@ -155,7 +155,7 @@ namespace Microsoft.AspNet.OutputCache {
             };
         }
 
-        public async Task<object> Get(string key) {
+        internal async Task<object> GetAsync(string key) {
             OutputCacheProviderAsync provider = GetProvider(HttpContext.Current);
             object result = await provider.GetAsync(key);
             var oce = result as OutputCacheEntry;
@@ -170,7 +170,7 @@ namespace Microsoft.AspNet.OutputCache {
             return result;
         }
 
-        public async Task Remove(string key, HttpContext context) {
+        internal async Task RemoveAsync(string key, HttpContext context) {
             // we don't know if it's in the internal cache or
             // one of the providers.  If a context is given,
             // then we can narrow down to at most one provider.
@@ -189,7 +189,7 @@ namespace Microsoft.AspNet.OutputCache {
             }
         }
 
-        public async Task InsertResponse(string cachedVaryKey,
+        internal async Task InsertResponseAsync(string cachedVaryKey,
             CachedVary cachedVary,
             string rawResponseKey,
             CachedRawResponse rawResponse,
@@ -258,7 +258,7 @@ namespace Microsoft.AspNet.OutputCache {
             }
         }
 
-        public static bool IsCacheableEncoding(string coding, string[] contentEncodings) {
+        internal static bool IsCacheableEncoding(string coding, string[] contentEncodings) {
             // return true if we are not varying by content encoding.
             if (contentEncodings == null) {
                 return true;
@@ -268,7 +268,7 @@ namespace Microsoft.AspNet.OutputCache {
             // return true if the Content-Encoding header is listed
         }
 
-        public static bool ContainsNonShareableCookies(HttpResponse response) {
+        internal static bool ContainsNonShareableCookies(HttpResponse response) {
             HttpCookieCollection cookies = response.Cookies;
             for (int i = 0; i < cookies.Count; i++) {
                 HttpCookie httpCookie = cookies[i];
@@ -279,7 +279,7 @@ namespace Microsoft.AspNet.OutputCache {
             return false;
         }
 
-        public static void UseSnapshot(HttpRawResponse rawResponse, bool sendBody, HttpResponse response) {
+        internal static void UseSnapshot(HttpRawResponse rawResponse, bool sendBody, HttpResponse response) {
             if (response.HeadersWritten)
                 throw new HttpException(SR.Cannot_use_snapshot_after_headers_sent);
             response.Clear();
@@ -296,7 +296,7 @@ namespace Microsoft.AspNet.OutputCache {
             response.SuppressContent = !sendBody;
         }
 
-        public static HttpRawResponse GetSnapshot(HttpResponse response) {
+        internal static HttpRawResponse GetSnapshot(HttpResponse response) {
             var headers = new NameValueCollection();
             const bool hasSubstBlocks = false;
             if (response.HeadersWritten)
@@ -328,7 +328,7 @@ namespace Microsoft.AspNet.OutputCache {
             };
         }
 
-        public static HttpCachePolicySettings GetCurrentSettings(HttpResponse response) {
+        internal static HttpCachePolicySettings GetCurrentSettings(HttpResponse response) {
             IEnumerable<KeyValuePair<HttpCacheValidateHandler, object>> validationCallbackInfo =
                 OutputCacheUtility.GetValidationCallbacks(response);
 
@@ -353,7 +353,7 @@ namespace Microsoft.AspNet.OutputCache {
             };
         }
 
-        public static void ResetFromHttpCachePolicySettings(HttpCachePolicySettings settings,
+        internal static void ResetFromHttpCachePolicySettings(HttpCachePolicySettings settings,
             DateTime utcTimestampRequest, HttpResponse response) {
             response.Cache.SetCacheability(settings.Cacheability);
             response.Cache.VaryByContentEncodings.SetContentEncodings(settings.VaryByContentEncodings);
@@ -385,13 +385,99 @@ namespace Microsoft.AspNet.OutputCache {
             }
         }
 
-        public static void UpdateCachedHeaders(HttpResponse response) {
+        internal static void UpdateCachedHeaders(HttpResponse response) {
+            //To enable Out of Band OutputCache Module support, we will always refresh the UtcTimestampRequest.
             if (response.Cache.UtcTimestampCreated == DateTime.MinValue) {
                 response.Cache.UtcTimestampCreated = HttpContext.Current.Timestamp.ToUniversalTime();
+            }         
+            UpdateFromDependencies(response);
+        }
+
+        private static void UpdateFromDependencies(HttpResponse response) {
+            CacheDependency dep = null;
+            // if response.Cache.GetETag() != null && response.Cache.GetETagFromFileDependencies() == true, then this HttpCachePolicy
+            // was created from HttpCachePolicySettings and we don't need to update _etag.
+            if (response.Cache.GetETag() == null && response.Cache.GetETagFromFileDependencies()) {
+                dep = OutputCacheUtility.CreateCacheDependency(response);
+                if (dep == null) {
+                    return;
+                }
+                string id = dep.GetUniqueID();
+                if (id == null) {
+                    throw new HttpException(SR.No_UniqueId_Cache_Dependency);
+                }
+                DateTime utcFileLastModifiedMax = UpdateLastModifiedTimeFromDependency(dep, response);
+                var sb = new StringBuilder(256);
+                sb.Append(HttpRuntime.AppDomainId);
+                sb.Append(id);
+                sb.Append("+LM");
+                sb.Append(utcFileLastModifiedMax.Ticks.ToString(CultureInfo.InvariantCulture));
+                response.Cache.SetETag("\"" +
+                                       System.Convert.ToBase64String(
+                                           CryptoUtil.ComputeSha256Hash(Encoding.UTF8.GetBytes(sb.ToString()))) + "\"");
+
+
+                if (!response.Cache.GetLastModifiedFromFileDependencies())
+                    return;
+            }
+
+            {
+                if (dep == null) {
+                    dep = OutputCacheUtility.CreateCacheDependency(response);
+                    if (dep == null) {
+                        return;
+                    }
+                }
+                DateTime utcFileLastModifiedMax = UpdateLastModifiedTimeFromDependency(dep,response);
+                UtcSetLastModified(utcFileLastModifiedMax, response);
             }
         }
 
-        public static string CreateOutputCachedItemKey(
+        private static void UtcSetLastModified(DateTime utcDate, HttpResponse response) {
+        
+                /*
+                 * Time may differ if the system time changes in the middle of the request. 
+                 * Adjust the timestamp to Now if necessary.
+                 */
+
+                DateTime utcNow = DateTime.UtcNow;
+                if (utcDate > utcNow) {
+                    utcDate = utcNow;
+                }
+
+                /*
+                 * Because HTTP dates have a resolution of 1 second, we
+                 * need to store dates with 1 second resolution or comparisons
+                 * will be off.
+                 */
+
+                utcDate = new DateTime(utcDate.Ticks - (utcDate.Ticks % TimeSpan.TicksPerSecond));
+                if (response.Cache.GetUtcLastModified()!= DateTime.MinValue || utcDate > response.Cache.GetUtcLastModified()) {
+                 response.Cache.SetLastModified(utcDate);
+                }
+            
+
+        }
+
+
+        private static DateTime UpdateLastModifiedTimeFromDependency(CacheDependency dep, HttpResponse response) {
+                  DateTime utcFileLastModifiedMax = dep.UtcLastModified;
+                if (utcFileLastModifiedMax <  response.Cache.GetUtcLastModified()) {
+                    utcFileLastModifiedMax = response.Cache.GetUtcLastModified();
+                }
+                // account for difference between file system time 
+                // and DateTime.Now. On some machines it appears that
+                // the last modified time is further in the future
+                // that DateTime.Now                
+                DateTime utcNow = DateTime.UtcNow;
+                if (utcFileLastModifiedMax > utcNow) {
+                    utcFileLastModifiedMax = utcNow;
+                }
+                return utcFileLastModifiedMax;
+            
+        }
+
+        private static string CreateOutputCachedItemKey(
             string path,
             string verb,
             HttpContext context,
@@ -530,7 +616,7 @@ namespace Microsoft.AspNet.OutputCache {
          * and form posted data.
          */
 
-        public static string CreateOutputCachedItemKeyAsync(HttpContext context, CachedVary cachedVary) {
+        internal static string CreateOutputCachedItemKey(HttpContext context, CachedVary cachedVary) {
             return CreateOutputCachedItemKey(context.Request.Path, context.Request.HttpMethod, context, cachedVary);
         }
 
@@ -540,7 +626,7 @@ namespace Microsoft.AspNet.OutputCache {
          * returns either i) an acceptable index in contentEncodings, ii) -1 if the identity is acceptable, or iii) -2 if nothing is acceptable
          */
 
-        public static int GetAcceptableEncoding(string[] contentEncodings, int startIndex, string acceptEncoding) {
+        internal static int GetAcceptableEncoding(string[] contentEncodings, int startIndex, string acceptEncoding) {
             // The format of Accept-Encoding is ( 1#( codings [ ";" "q" "=" qvalue ] ) | "*" )
             if (string.IsNullOrEmpty(acceptEncoding)) {
                 return -1; // use "identity"
@@ -604,9 +690,9 @@ namespace Microsoft.AspNet.OutputCache {
             return bestCodingIndex; // coding index with highest weight, possibly -1 or -2
         }
 
-        public static double Tolerance { get; set; }
+        private static double Tolerance { get; set; }
 
-        // Get the weight of the specified coding from the Accept-Encoding header.
+        // GetAsync the weight of the specified coding from the Accept-Encoding header.
         // 1 means use this coding.  0 means don't use this coding.  A number between
         // 1 and 0 must be compared with other codings.  -1 means the coding was not found
         private static double GetAcceptableEncodingHelper(string coding, string acceptEncoding) {
@@ -689,7 +775,7 @@ namespace Microsoft.AspNet.OutputCache {
             return result;
         }
 
-        public static bool IsAcceptableEncoding(string contentEncoding, string acceptEncoding) {
+        internal static bool IsAcceptableEncoding(string contentEncoding, string acceptEncoding) {
             if (string.IsNullOrEmpty(contentEncoding)) {
                 // if Content-Encoding is not set treat it as the identity
                 contentEncoding = Identity;
@@ -703,5 +789,7 @@ namespace Microsoft.AspNet.OutputCache {
             return !(Math.Abs(weight) < tolerance) &&
                    (!(weight <= 0) || Math.Abs(GetAcceptableEncodingHelper(Asterisk, acceptEncoding)) > 0);
         }
+
+
     }
 }

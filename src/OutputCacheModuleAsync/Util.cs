@@ -193,42 +193,6 @@
         }
     }
 
-    internal class HashCodeCombiner {
-        private long _combinedHash;
-
-        public HashCodeCombiner() {
-            // Start with a seed (obtained from string.GetHashCode implementation)
-            _combinedHash = 5381;
-        }
-
-        public void AddArray(string[] a) {
-            if (a == null) {
-                return;
-            }
-            int n = a.Length;
-            for (int i = 0; i < n; i++) {
-                AddObject(a[i]);
-            }
-        }
-
-        public void AddInt(int n) {
-            _combinedHash = ((_combinedHash << 5) + _combinedHash) ^ n;
-            Debug.WriteLine("HashCodeCombiner", "Adding " + n.ToString("x") + " --> " + _combinedHash.ToString("x"));
-        }
-
-        public void AddObject(string s) {
-            if (s != null)
-                AddInt(s.GetHashCode());
-        }
-
-        public void AddObject(object o) {
-            if (o != null)
-                AddInt(o.GetHashCode());
-        }
-
-        public int CombinedHash32 => _combinedHash.GetHashCode();
-    }
-
     internal class StringUtil {
         public static bool StringArrayEquals(string[] a, string[] b) {
             if ((a == null) != (b == null)) {

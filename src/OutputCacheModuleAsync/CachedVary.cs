@@ -25,6 +25,7 @@
                    && StringUtil.StringArrayEquals(Params, cv.Params);
         }
 
+        /*
         public override int GetHashCode() {
             var hashCodeCombiner = new HashCodeCombiner();
             hashCodeCombiner.AddObject(VaryByAllParams);
@@ -34,5 +35,6 @@
             hashCodeCombiner.AddArray(Params);
             return hashCodeCombiner.CombinedHash32;
         }
+        */
     }
 }

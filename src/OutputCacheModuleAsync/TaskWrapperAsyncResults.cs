@@ -4,7 +4,7 @@
     using System.Threading;
 
     // Wraps a Task class, optionally overriding the State object (since the Task Asynchronous Pattern doesn't normally use them).
-    internal class TaskWrapperAsyncResult : IAsyncResult {
+    class TaskWrapperAsyncResult : IAsyncResult {
         private bool _forceCompletedSynchronously;
 
         public TaskWrapperAsyncResult(Task task, object asyncState) {

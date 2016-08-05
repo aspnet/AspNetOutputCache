@@ -3,7 +3,7 @@
     using System.Collections;
     using System.Collections.Specialized;
 
-    internal class OutputCacheEntry {
+    class OutputCacheEntry {
         public Guid CachedVaryId { get; set; }
         public HttpCachePolicySettings Settings { get; set; }
         public string KernelCacheUrl { get; set; }

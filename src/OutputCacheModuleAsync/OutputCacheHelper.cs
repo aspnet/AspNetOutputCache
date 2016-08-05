@@ -1,7 +1,4 @@
-﻿using System.IO;
-using Microsoft.AspNet.OutputCache.Resource;
-
-namespace Microsoft.AspNet.OutputCache {
+﻿namespace Microsoft.AspNet.OutputCache {
     using System.Collections.Generic;
     using System.Linq;
     using System;
@@ -13,8 +10,10 @@ namespace Microsoft.AspNet.OutputCache {
     using System.Text;
     using System.Globalization;
     using System.Diagnostics;
+    using System.IO;
+    using Microsoft.AspNet.OutputCache.Resource;
 
-    internal class OutputCacheHelper {
+    class OutputCacheHelper {
         private const int MaxPostKeyLength = 15000;
         private const string NullVarybyValue = "+n+";
         internal const string TagOutputcache = "OutputCache";
@@ -23,7 +22,6 @@ namespace Microsoft.AspNet.OutputCache {
         private const string Identity = "identity";
         private const string Asterisk = "*";
         private const string OutputcacheKeyprefixDependencies = "Microsoft.AspNet.OutputCache.Dependencies";
-        private readonly CacheItemRemovedCallback _dependencyRemovedCallback = null;
         private InMemoryOutputCacheProvider _inMemoryOutputCacheProvider;
 
         private InMemoryOutputCacheProvider InMemoryOutputCacheProvider => _inMemoryOutputCacheProvider ??
@@ -37,7 +35,7 @@ namespace Microsoft.AspNet.OutputCache {
             // it's in the internal cache.
             if (providerName != null) {
                 OutputCacheProviderCollection providers = OutputCache.Providers;
-                provider = (OutputCacheProviderAsync) providers?[providerName];
+                provider = providers?[providerName] as OutputCacheProviderAsync;
             }
             else {
                 provider = InMemoryOutputCacheProvider;
@@ -70,7 +68,6 @@ namespace Microsoft.AspNet.OutputCache {
             var dep = new CacheDependency(fileDeps);
             int idStartIndex = OutputcacheKeyprefixDependencies.Length;
             int idLength = depKey.Length - idStartIndex;
-            CacheItemRemovedCallback callback = _dependencyRemovedCallback;
             // have the file dependencies changed?
             if (string.Compare(dep.GetUniqueID(), 0, depKey, idStartIndex, idLength, StringComparison.Ordinal) == 0) {
                 // file dependencies have not changed--cache them with callback to remove OutputCacheEntry if they change
@@ -84,7 +81,7 @@ namespace Microsoft.AspNet.OutputCache {
                     Dependencies = dep,
                     CacheItemPriority = CacheItemPriority.Normal,
                     DependencyCacheTimeSpan = Cache.NoSlidingExpiration,
-                    DependencyRemovedCallback = callback
+                    DependencyRemovedCallback = null
                 };
                 InMemoryOutputCacheProvider.Add(depKey, dcew, DateTimeOffset.MaxValue);
                 return false;
@@ -155,7 +152,7 @@ namespace Microsoft.AspNet.OutputCache {
             };
         }
 
-        internal async Task<object> GetAsync(string key) {
+        public async Task<object> GetAsync(string key) {
             OutputCacheProviderAsync provider = GetProvider(HttpContext.Current);
             object result = await provider.GetAsync(key);
             var oce = result as OutputCacheEntry;
@@ -170,7 +167,7 @@ namespace Microsoft.AspNet.OutputCache {
             return result;
         }
 
-        internal async Task RemoveAsync(string key, HttpContext context) {
+        public async Task RemoveAsync(string key, HttpContext context) {
             // we don't know if it's in the internal cache or
             // one of the providers.  If a context is given,
             // then we can narrow down to at most one provider.
@@ -189,7 +186,7 @@ namespace Microsoft.AspNet.OutputCache {
             }
         }
 
-        internal async Task InsertResponseAsync(string cachedVaryKey,
+        public async Task InsertResponseAsync(string cachedVaryKey,
             CachedVary cachedVary,
             string rawResponseKey,
             CachedRawResponse rawResponse,
@@ -248,7 +245,7 @@ namespace Microsoft.AspNet.OutputCache {
                         Dependencies = dependencies,
                         CacheItemPriority = CacheItemPriority.Normal,
                         DependencyCacheTimeSpan = Cache.NoSlidingExpiration,
-                        DependencyRemovedCallback = _dependencyRemovedCallback
+                        DependencyRemovedCallback = null
                     };
                     object d = await provider.AddAsync(depKey, dcew, absExp);
                     if (d != null) {
@@ -258,7 +255,7 @@ namespace Microsoft.AspNet.OutputCache {
             }
         }
 
-        internal static bool IsCacheableEncoding(string coding, string[] contentEncodings) {
+        public static bool IsCacheableEncoding(string coding, string[] contentEncodings) {
             // return true if we are not varying by content encoding.
             if (contentEncodings == null) {
                 return true;
@@ -268,7 +265,7 @@ namespace Microsoft.AspNet.OutputCache {
             // return true if the Content-Encoding header is listed
         }
 
-        internal static bool ContainsNonShareableCookies(HttpResponse response) {
+        public static bool ContainsNonShareableCookies(HttpResponse response) {
             HttpCookieCollection cookies = response.Cookies;
             for (int i = 0; i < cookies.Count; i++) {
                 HttpCookie httpCookie = cookies[i];
@@ -279,7 +276,7 @@ namespace Microsoft.AspNet.OutputCache {
             return false;
         }
 
-        internal static void UseSnapshot(HttpRawResponse rawResponse, bool sendBody, HttpResponse response) {
+        public static void UseSnapshot(HttpRawResponse rawResponse, bool sendBody, HttpResponse response) {
             if (response.HeadersWritten)
                 throw new HttpException(SR.Cannot_use_snapshot_after_headers_sent);
             response.Clear();
@@ -296,7 +293,7 @@ namespace Microsoft.AspNet.OutputCache {
             response.SuppressContent = !sendBody;
         }
 
-        internal static HttpRawResponse GetSnapshot(HttpResponse response) {
+        public static HttpRawResponse GetSnapshot(HttpResponse response) {
             var headers = new NameValueCollection();
             const bool hasSubstBlocks = false;
             if (response.HeadersWritten)
@@ -328,7 +325,7 @@ namespace Microsoft.AspNet.OutputCache {
             };
         }
 
-        internal static HttpCachePolicySettings GetCurrentSettings(HttpResponse response) {
+        public static HttpCachePolicySettings GetCurrentSettings(HttpResponse response) {
             IEnumerable<KeyValuePair<HttpCacheValidateHandler, object>> validationCallbackInfo =
                 OutputCacheUtility.GetValidationCallbacks(response);
 
@@ -353,7 +350,7 @@ namespace Microsoft.AspNet.OutputCache {
             };
         }
 
-        internal static void ResetFromHttpCachePolicySettings(HttpCachePolicySettings settings,
+        public static void ResetFromHttpCachePolicySettings(HttpCachePolicySettings settings,
             DateTime utcTimestampRequest, HttpResponse response) {
             response.Cache.SetCacheability(settings.Cacheability);
             response.Cache.VaryByContentEncodings.SetContentEncodings(settings.VaryByContentEncodings);
@@ -385,7 +382,7 @@ namespace Microsoft.AspNet.OutputCache {
             }
         }
 
-        internal static void UpdateCachedHeaders(HttpResponse response) {
+        public static void UpdateCachedHeaders(HttpResponse response) {
             //To enable Out of Band OutputCache Module support, we will always refresh the UtcTimestampRequest.
             if (response.Cache.UtcTimestampCreated == DateTime.MinValue) {
                 response.Cache.UtcTimestampCreated = HttpContext.Current.Timestamp.ToUniversalTime();
@@ -395,6 +392,7 @@ namespace Microsoft.AspNet.OutputCache {
 
         private static void UpdateFromDependencies(HttpResponse response) {
             CacheDependency dep = null;
+            DateTime utcFileLastModifiedMax;
             // if response.Cache.GetETag() != null && response.Cache.GetETagFromFileDependencies() == true, then this HttpCachePolicy
             // was created from HttpCachePolicySettings and we don't need to update _etag.
             if (response.Cache.GetETag() == null && response.Cache.GetETagFromFileDependencies()) {
@@ -406,7 +404,7 @@ namespace Microsoft.AspNet.OutputCache {
                 if (id == null) {
                     throw new HttpException(SR.No_UniqueId_Cache_Dependency);
                 }
-                DateTime utcFileLastModifiedMax = UpdateLastModifiedTimeFromDependency(dep, response);
+                utcFileLastModifiedMax = UpdateLastModifiedTimeFromDependency(dep, response);
                 var sb = new StringBuilder(256);
                 sb.Append(HttpRuntime.AppDomainId);
                 sb.Append(id);
@@ -415,22 +413,17 @@ namespace Microsoft.AspNet.OutputCache {
                 response.Cache.SetETag("\"" +
                                        System.Convert.ToBase64String(
                                            CryptoUtil.ComputeSha256Hash(Encoding.UTF8.GetBytes(sb.ToString()))) + "\"");
-
-
                 if (!response.Cache.GetLastModifiedFromFileDependencies())
                     return;
             }
-
-            {
+            if (dep == null) {
+                dep = OutputCacheUtility.CreateCacheDependency(response);
                 if (dep == null) {
-                    dep = OutputCacheUtility.CreateCacheDependency(response);
-                    if (dep == null) {
-                        return;
-                    }
+                    return;
                 }
-                DateTime utcFileLastModifiedMax = UpdateLastModifiedTimeFromDependency(dep,response);
-                UtcSetLastModified(utcFileLastModifiedMax, response);
             }
+            utcFileLastModifiedMax = UpdateLastModifiedTimeFromDependency(dep, response);
+            UtcSetLastModified(utcFileLastModifiedMax, response);
         }
 
         private static void UtcSetLastModified(DateTime utcDate, HttpResponse response) {
@@ -439,7 +432,6 @@ namespace Microsoft.AspNet.OutputCache {
                  * Time may differ if the system time changes in the middle of the request. 
                  * Adjust the timestamp to Now if necessary.
                  */
-
                 DateTime utcNow = DateTime.UtcNow;
                 if (utcDate > utcNow) {
                     utcDate = utcNow;
@@ -450,15 +442,11 @@ namespace Microsoft.AspNet.OutputCache {
                  * need to store dates with 1 second resolution or comparisons
                  * will be off.
                  */
-
                 utcDate = new DateTime(utcDate.Ticks - (utcDate.Ticks % TimeSpan.TicksPerSecond));
                 if (response.Cache.GetUtcLastModified()!= DateTime.MinValue || utcDate > response.Cache.GetUtcLastModified()) {
                  response.Cache.SetLastModified(utcDate);
                 }
-            
-
         }
-
 
         private static DateTime UpdateLastModifiedTimeFromDependency(CacheDependency dep, HttpResponse response) {
                   DateTime utcFileLastModifiedMax = dep.UtcLastModified;
@@ -474,7 +462,6 @@ namespace Microsoft.AspNet.OutputCache {
                     utcFileLastModifiedMax = utcNow;
                 }
                 return utcFileLastModifiedMax;
-            
         }
 
         private static string CreateOutputCachedItemKey(
@@ -616,7 +603,7 @@ namespace Microsoft.AspNet.OutputCache {
          * and form posted data.
          */
 
-        internal static string CreateOutputCachedItemKey(HttpContext context, CachedVary cachedVary) {
+        public static string CreateOutputCachedItemKey(HttpContext context, CachedVary cachedVary) {
             return CreateOutputCachedItemKey(context.Request.Path, context.Request.HttpMethod, context, cachedVary);
         }
 
@@ -626,7 +613,7 @@ namespace Microsoft.AspNet.OutputCache {
          * returns either i) an acceptable index in contentEncodings, ii) -1 if the identity is acceptable, or iii) -2 if nothing is acceptable
          */
 
-        internal static int GetAcceptableEncoding(string[] contentEncodings, int startIndex, string acceptEncoding) {
+        public static int GetAcceptableEncoding(string[] contentEncodings, int startIndex, string acceptEncoding) {
             // The format of Accept-Encoding is ( 1#( codings [ ";" "q" "=" qvalue ] ) | "*" )
             if (string.IsNullOrEmpty(acceptEncoding)) {
                 return -1; // use "identity"
@@ -692,7 +679,7 @@ namespace Microsoft.AspNet.OutputCache {
 
         private static double Tolerance { get; set; }
 
-        // GetAsync the weight of the specified coding from the Accept-Encoding header.
+        // Get the weight of the specified coding from the Accept-Encoding header.
         // 1 means use this coding.  0 means don't use this coding.  A number between
         // 1 and 0 must be compared with other codings.  -1 means the coding was not found
         private static double GetAcceptableEncodingHelper(string coding, string acceptEncoding) {
@@ -775,7 +762,7 @@ namespace Microsoft.AspNet.OutputCache {
             return result;
         }
 
-        internal static bool IsAcceptableEncoding(string contentEncoding, string acceptEncoding) {
+        public static bool IsAcceptableEncoding(string contentEncoding, string acceptEncoding) {
             if (string.IsNullOrEmpty(contentEncoding)) {
                 // if Content-Encoding is not set treat it as the identity
                 contentEncoding = Identity;
@@ -789,7 +776,5 @@ namespace Microsoft.AspNet.OutputCache {
             return !(Math.Abs(weight) < tolerance) &&
                    (!(weight <= 0) || Math.Abs(GetAcceptableEncodingHelper(Asterisk, acceptEncoding)) > 0);
         }
-
-
     }
 }

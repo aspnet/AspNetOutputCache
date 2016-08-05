@@ -1,7 +1,7 @@
 ﻿namespace Microsoft.AspNet.OutputCache {
     using System;
 
-    internal class CachedRawResponse {
+    class CachedRawResponse {
 
         public Guid CachedVaryId { get; set; }
 

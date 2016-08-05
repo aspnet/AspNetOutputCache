@@ -590,7 +590,7 @@ namespace Microsoft.AspNet.OutputCache {
         }
     }
 
-    internal class CachedItem {
+    class CachedItem {
         public bool DoReturn { get; set; }
         public object Item { get; set; }
     }

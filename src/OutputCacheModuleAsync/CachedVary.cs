@@ -1,7 +1,7 @@
 ﻿namespace Microsoft.AspNet.OutputCache {
     using System;
 
-    internal class CachedVary {
+    class CachedVary {
         public string[] ContentEncodings { get; set; }
         public string[] Headers { get; set; }
         public string[] Params { get; set; }
@@ -24,17 +24,5 @@
                    && StringUtil.StringArrayEquals(Headers, cv.Headers)
                    && StringUtil.StringArrayEquals(Params, cv.Params);
         }
-
-        /*
-        public override int GetHashCode() {
-            var hashCodeCombiner = new HashCodeCombiner();
-            hashCodeCombiner.AddObject(VaryByAllParams);
-            hashCodeCombiner.AddObject((object) VaryByCustom);
-            hashCodeCombiner.AddArray(ContentEncodings);
-            hashCodeCombiner.AddArray(Headers);
-            hashCodeCombiner.AddArray(Params);
-            return hashCodeCombiner.CombinedHash32;
-        }
-        */
     }
 }

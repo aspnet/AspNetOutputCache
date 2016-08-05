@@ -4,8 +4,8 @@
     using System.Threading.Tasks;
     using System.Web.Caching;
     using Microsoft.AspNet.OutputCache.Resource;
-    internal class InMemoryOutputCacheProvider : OutputCacheProviderAsync {
-         private readonly MemoryCache _cache = new MemoryCache(SR.Microsoft_AspNet_OutputCache_Default_InMemory_Provider);
+    class InMemoryOutputCacheProvider : OutputCacheProviderAsync {
+        private readonly MemoryCache _cache = new MemoryCache(SR.Microsoft_AspNet_OutputCache_Default_InMemory_Provider);
 
         public override Task<object> GetAsync(string key) {
             return Task.FromResult(Get(key)); 

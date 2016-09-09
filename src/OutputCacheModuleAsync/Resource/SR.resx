@@ -117,77 +117,17 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Adding_response_to_cache" xml:space="preserve">
-    <value>Adding response to cache. Key = '{0}'</value>
-  </data>
-  <data name="Callback_status_is_IgnoreThisRequest" xml:space="preserve">
-    <value>Output cache item found but callback status is IgnoreThisRequest. Key = '{0}'. Returning from</value>
-  </data>
   <data name="Cannot_get_snapshot_if_not_buffered" xml:space="preserve">
     <value>Cannot get snapshot if not buffered.</value>
   </data>
   <data name="Cannot_use_snapshot_after_headers_sent" xml:space="preserve">
     <value>Cannot use snapshot after headers sent.</value>
   </data>
-  <data name="Contains_querystring_and_no_VaryByParam_specified" xml:space="preserve">
-    <value>Output cache item found but contains a {0} and no {1} specified. Key='{2}'. Returning from</value>
-  </data>
-  <data name="Couldnot_add_non_cacheable_post" xml:space="preserve">
-    <value>Couldn't add non-cacheable post. Key ='{0}'</value>
-  </data>
-  <data name="Hit_conditional_request_satisfied" xml:space="preserve">
-    <value>Hit, conditional request satisfied, status=304. Key='{0}'. Returning from</value>
-  </data>
-  <data name="Ignore_IfModifiedSince_header" xml:space="preserve">
-    <value>Ignore If-Modified-Since header, invalid format: '{0}'</value>
-  </data>
-  <data name="Invalid_validation_status" xml:space="preserve">
-    <value>Invalid validation status, ignoring it, status = '{0}'. Key = '{1}'</value>
-  </data>
-  <data name="method_is_not" xml:space="preserve">
-    <value>method is not</value>
-  </data>
-  <data name="Method_is_POST_and_no_VaryByParam_specified" xml:space="preserve">
-    <value>Output cache item found but method is {0} and no {1} specified. Key='{2}'. Returning from</value>
-  </data>
   <data name="Microsoft_AspNet_OutputCache_Default_InMemory_Provider" xml:space="preserve">
     <value>Microsoft.AspNet.OutputCache Default In-Memory Provider</value>
   </data>
-  <data name="Miss_key_could_not_be_created_for_varyby_item" xml:space="preserve">
-    <value>Miss, key could not be created for {0} item. Returning from</value>
-  </data>
-  <data name="Not_returning_found_item_due_to_Cache_Control_max_age_directive" xml:space="preserve">
-    <value>Not returning found item due to Cache-Control: max-age directive. Returning from</value>
-  </data>
-  <data name="Not_returning_found_item_due_to_Cache_Control_min_fresh_directive" xml:space="preserve">
-    <value>Not returning found item due to Cache-Control: min-fresh directive. Returning from</value>
-  </data>
-  <data name="OutputCacheModuleEnter" xml:space="preserve">
-    <value>OutputCacheModuleEnter</value>
-  </data>
-  <data name="OutputCacheModuleLeave" xml:space="preserve">
-    <value>OutputCache Module Leave</value>
-  </data>
-  <data name="Output_cache_item_found_but_callback_invalidated_it" xml:space="preserve">
-    <value>Output cache item found but callback invalidated it. key= '{0}'. Returning from</value>
-  </data>
   <data name="Provider_does_not_support_policy_for_responses" xml:space="preserve">
     <value>Provider does not support policy for responses.</value>
-  </data>
-  <data name="Range_request_and_IgnoreRangeRequests_is_true" xml:space="preserve">
-    <value>Output cache item found but this is a {0} and {1} is true. Key='{2}'. Returning from</value>
-  </data>
-  <data name="Response_Flush_inside_GetVaryByCustomstring" xml:space="preserve">
-    <value>Response.Flush() inside GetAsyncVaryByCustomstring key ='{0}'</value>
-  </data>
-  <data name="Returning_from" xml:space="preserve">
-    <value>Returning from</value>
-  </data>
-  <data name="Skipping_lookup_because_of_Cache_Control_no_cache_or_no_store_directive" xml:space="preserve">
-    <value>Skipping lookup because of Cache-Control: no-cache or no-store directive. Returning from</value>
-  </data>
-  <data name="Skipping_lookup_because_of_Pragma_no_cache_directive" xml:space="preserve">
-    <value>Skipping lookup because of Pragma: no-cache directive. Returning from</value>
   </data>
   <data name="The_provided_IAsyncResult_is_invalid" xml:space="preserve">
     <value>The provided {0} is invalid.</value>

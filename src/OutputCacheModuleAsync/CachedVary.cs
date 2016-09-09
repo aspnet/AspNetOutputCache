@@ -14,6 +14,9 @@
         }
 
         public override bool Equals(object obj) {
+            if (Object.ReferenceEquals(obj,this)) {
+                return true;
+            }
             var cv = obj as CachedVary;
             if (cv == null) {
                 return false;

@@ -1,6 +1,4 @@
-﻿using System.Text;
-
-namespace Microsoft.AspNet.OutputCache {
+﻿namespace Microsoft.AspNet.OutputCache {
     using System.Collections.Generic;
     using System;
     using System.Linq;
@@ -18,13 +16,11 @@ namespace Microsoft.AspNet.OutputCache {
     /// </summary>
     public class OutputCacheModuleAsync : IHttpModule {
         private const string Asterisk = "*";
-        private static readonly char[] s_fieldSeparators = {',', ' '};
-        private string _key;
+        private static readonly char[] s_fieldSeparators = { ',', ' ' };
         private readonly OutputCacheHelper _outputCacheHelper = new OutputCacheHelper();
 
         void IHttpModule.Init(HttpApplication app) {
             var cacheConfig = ConfigurationManager.GetSection("system.web/caching/outputCache") as OutputCacheSection;
-            Debug.Assert(cacheConfig != null, "cacheConfig != null");
             if (!cacheConfig.EnableOutputCache) {
                 return;
             }
@@ -35,7 +31,7 @@ namespace Microsoft.AspNet.OutputCache {
         /// <summary>
         /// Implement the IHTTPModule interface
         /// </summary>
-        public void Dispose() {}
+        public void Dispose() { }
 
         private IAsyncResult BeginOnResolveRequestCache(object source, EventArgs e, AsyncCallback cb, object extraData) {
             return TaskAsyncHelper.BeginTask(() => OnEnterAsync(source, e), cb, extraData);
@@ -54,17 +50,17 @@ namespace Microsoft.AspNet.OutputCache {
         }
 
         private async Task OnEnterAsync(object source, EventArgs eventArgs) {
-            var app = (HttpApplication) source;
+            var app = (HttpApplication)source;
             HttpContext context = app.Context;
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
 
-            if (!IsValidHttpMethod(request)) {
+            if (!IsHttpMethodSupported(request)) {
                 return;
             }
 
             // Create a lookup key. Also store the key in global parameter _key to be used inside OnLeave() later   
-            string key = _key = OutputCacheHelper.CreateOutputCachedItemKey(context, null);
+            string key = OutputCacheHelper.CreateOutputCachedItemKey(context, null);
 
             // Lookup the cache vary using the key
             object item = await _outputCacheHelper.GetAsync(key);
@@ -81,33 +77,40 @@ namespace Microsoft.AspNet.OutputCache {
                 return;
 
             // From this point on, we have an Raw Response entry to work with.
-            var cachedRawResponse = (CachedRawResponse) cachedItem.Item;
+            var cachedRawResponse = (CachedRawResponse)cachedItem.Item;
             HttpCachePolicySettings settings = cachedRawResponse.CachePolicy;
-            if (CheckHasQueryStringOrFormPost(request, key, cachedVary, settings)) {
+            if (CheckCachedVary(request, cachedVary, settings)) {
                 return;
             }
+            if (settings.IgnoreRangeRequests) {
+                if (IsRangeRequest(request)) {
+                    return;
+                }
+            }
 
-            if (await CheckHeadersToDetermineAcceptCachedCopyAsync(key, settings, request, context)) {
+            if (CheckHeaders(settings, request, context)) {
+                return;
+            }
+            if (await CheckValidityAsync(key, settings, context)) {
                 return;
             }
 
             HttpRawResponse rawResponse = cachedRawResponse.RawResponse;
-            if (!EnsureContentEncodingAcceptable(cachedVary, request, rawResponse)) {
+            if (!IsContentEncodingAcceptable(cachedVary, request, rawResponse)) {
                 return;
             }
-            GetCachedResponse(context, request, response, key, settings, rawResponse);
+            UpdateCachedResponse(context, request, response, key, settings, rawResponse);
 
             // re-insert entry in kernel cache if necessary
             string originalCacheUrl = cachedRawResponse.KernelCacheUrl;
             if (originalCacheUrl != null) {
                 OutputCacheUtility.SetupKernelCaching(originalCacheUrl, context.Response);
             }
-            _key = null;
             app.CompleteRequest();
         }
 
         private async Task OnLeaveAsync(object source, EventArgs eventArgs) {
-            HttpContext context = ((HttpApplication) source).Context;
+            HttpContext context = ((HttpApplication)source).Context;
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
             //Determine whether the response is cacheable.
@@ -115,7 +118,6 @@ namespace Microsoft.AspNet.OutputCache {
                 return;
             }
             await CacheResponseAsync(context, response);
-            _key = null;
         }
 
         private static bool IsResponseCacheable(HttpResponse response, HttpRequest request, HttpContext context) {
@@ -126,15 +128,16 @@ namespace Microsoft.AspNet.OutputCache {
             if (response.StatusCode != 200) {
                 return false;
             }
-            if (request.HttpMethod != "GET" && request.HttpMethod != "POST") {
+            if (request.HttpMethod != HttpMethods.GET && request.HttpMethod != HttpMethods.POST) {
                 return false;
             }
             if (response.HeadersWritten) {
                 return false;
             }
-            if (cache.GetCacheability() != HttpCacheability.Public &&
-                cache.GetCacheability() != HttpCacheability.ServerAndPrivate &&
-                cache.GetCacheability() != HttpCacheability.ServerAndNoCache) {
+            var cacheability = cache.GetCacheability();
+            if (cacheability != HttpCacheability.Public &&
+                cacheability != HttpCacheability.ServerAndPrivate &&
+                cacheability != HttpCacheability.ServerAndNoCache) {
                 return false;
             }
             if (cache.GetNoServerCaching()) {
@@ -153,13 +156,13 @@ namespace Microsoft.AspNet.OutputCache {
             if (!hasExpirationPolicy && !hasValidationPolicy) {
                 return false;
             }
-            if (cache.VaryByHeaders["*"]) {
+            if (cache.VaryByHeaders[Asterisk]) {
                 return false;
             }
             bool acceptParams = (cache.VaryByParams.IgnoreParams ||
-                                 (Equals(cache.VaryByParams.GetParams(), new[] {"*"})) ||
+                                 (Equals(cache.VaryByParams.GetParams(), new[] { "*" })) ||
                                  (cache.VaryByParams.GetParams() != null && cache.VaryByParams.GetParams().Any()));
-            if (!acceptParams && (request.HttpMethod == "POST" || (request.QueryString.Count > 0))) {
+            if (!acceptParams && (request.HttpMethod == HttpMethods.POST || (request.QueryString.Count > 0))) {
                 return false;
             }
             return cache.VaryByContentEncodings.GetContentEncodings() == null ||
@@ -168,26 +171,21 @@ namespace Microsoft.AspNet.OutputCache {
         }
 
         private async Task CacheResponseAsync(HttpContext context, HttpResponse response) {
-            CachedVary cachedVary;
+            CachedVary cachedVary = null; ;
             string keyRawResponse;
-            /*
-            * Add response to cache.
-            */
+            /* Add response to cache.*/
             OutputCacheHelper.UpdateCachedHeaders(response);
             //look at response cachepolicy and decide if to cache it
             HttpCachePolicySettings settings = OutputCacheHelper.GetCurrentSettings(response);
             string[] varyByHeaders = settings.VaryByHeaders;
             string[] varyByParams = settings.IgnoreParams ? null : settings.VaryByParams;
             /* Create the key if it was not created in OnEnter */
-            if (_key == null) {
-                _key = OutputCacheHelper.CreateOutputCachedItemKey(context, null);
-                Debug.Assert(_key != null, "_key != null");
-            }
+            string key = OutputCacheHelper.CreateOutputCachedItemKey(context, null);
+
             if (settings.VaryByContentEncodings == null && varyByHeaders == null && varyByParams == null &&
                 settings.VaryByCustom == null) {
                 // This is not a varyBy item.
-                keyRawResponse = _key;
-                cachedVary = null;
+                keyRawResponse = key;
             }
             else {
                 /*
@@ -225,14 +223,11 @@ namespace Microsoft.AspNet.OutputCache {
                 };
                 keyRawResponse = OutputCacheHelper.CreateOutputCachedItemKey(context, cachedVary);
                 if (keyRawResponse == null) {
-                    Debug.WriteLine(SR.OutputCacheModuleLeave, string.Format(SR.Couldnot_add_non_cacheable_post,_key));
                     return;
                 }
                 // it is possible that the user code calculating custom vary-by
                 // string would Flush making the response non-cacheable. Check fo it here.
                 if (response.HeadersWritten) {
-                    Debug.WriteLine(SR.OutputCacheModuleLeave,
-                        string.Format(SR.Response_Flush_inside_GetVaryByCustomstring, _key));
                     return;
                 }
             }
@@ -251,6 +246,9 @@ namespace Microsoft.AspNet.OutputCache {
                 utcExpires = settings.UtcExpires;
             }
             // Check and ensure that item hasn't expired:
+            await InsertResponseAsync(key, utcExpires, response, context, cachedVary, settings, keyRawResponse, slidingDelta);
+        }
+        private async Task InsertResponseAsync(string key, DateTime utcExpires, HttpResponse response, HttpContext context, CachedVary cachedVary, HttpCachePolicySettings settings, string keyRawResponse, TimeSpan slidingDelta) {
             if (utcExpires > DateTime.Now) {
                 // Create the response object to be sent on cache hits.
                 HttpRawResponse httpRawResponse = OutputCacheHelper.GetSnapshot(response);
@@ -262,22 +260,16 @@ namespace Microsoft.AspNet.OutputCache {
                     KernelCacheUrl = kernelCacheUrl,
                     CachedVaryId = cachedVaryId
                 };
-                Debug.WriteLine(SR.OutputCacheModuleLeave, string.Format(SR.Adding_response_to_cache, keyRawResponse));
-                CacheDependency dep = OutputCacheUtility.CreateCacheDependency(context.Response);
-                try {
-                    await _outputCacheHelper.InsertResponseAsync(_key, cachedVary,
+                using (CacheDependency dep = OutputCacheUtility.CreateCacheDependency(context.Response)) {
+                    await _outputCacheHelper.InsertResponseAsync(key, cachedVary,
                         keyRawResponse, cachedRawResponse,
                         dep,
                         utcExpires, slidingDelta);
                 }
-                catch {
-                    dep?.Dispose();
-                    throw;
-                }
             }
         }
 
-        private static void GetCachedResponse(HttpContext context, HttpRequest request, HttpResponse response,
+        private static void UpdateCachedResponse(HttpContext context, HttpRequest request, HttpResponse response,
             string key, HttpCachePolicySettings settings, HttpRawResponse rawResponse) {
             /*
              * Try to satisfy a conditional request. The cached response
@@ -293,25 +285,20 @@ namespace Microsoft.AspNet.OutputCache {
             int send304 = -1;
             if (!rawResponse.HasSubstBlocks) {
                 /* Check "If-Modified-Since" header */
-                string ifModifiedSinceHeader = request.Headers["If-Modified-Since"];
+
+                string ifModifiedSinceHeader = request.Headers[HttpRequestHeaders.IfModifiedSite];
                 if (ifModifiedSinceHeader != null) {
                     send304 = 0;
-                    try {
-                        DateTime utcIfModifiedSince = HttpDate.UtcParse(ifModifiedSinceHeader);
-                        if (settings.UtcLastModified != DateTime.MinValue &&
-                            settings.UtcLastModified <= utcIfModifiedSince &&
-                            utcIfModifiedSince <= context.Timestamp.ToUniversalTime()) {
-                            send304 = 1;
-                        }
-                    }
-                    catch {
-                        Debug.WriteLine(SR.OutputCacheModuleEnter,
-                            string.Format(SR.Ignore_IfModifiedSince_header, ifModifiedSinceHeader));
+                    DateTime utcIfModifiedSince = HttpDate.UtcParse(ifModifiedSinceHeader);
+                    if (settings.UtcLastModified != DateTime.MinValue &&
+                        settings.UtcLastModified <= utcIfModifiedSince &&
+                        utcIfModifiedSince <= context.Timestamp.ToUniversalTime()) {
+                        send304 = 1;
                     }
                 }
                 /* Check "If-None-Match" header */
                 if (send304 != 0) {
-                    string etag = request.Headers["IfNoneMatch"];
+                    string etag = request.Headers[HttpRequestHeaders.IfNoneMatch];
                     if (etag != null) {
                         send304 = 0;
                         string[] etags = etag.Split(s_fieldSeparators);
@@ -333,7 +320,6 @@ namespace Microsoft.AspNet.OutputCache {
                 /*
                  * Send 304 Not Modified
                  */
-                Debug.WriteLine(SR.OutputCacheModuleEnter, string.Format(SR.Hit_conditional_request_satisfied,key) +"OutputCacheModule::Enter");
                 if (response.HeadersWritten) {
                     response.ClearHeaders();
                 }
@@ -349,91 +335,42 @@ namespace Microsoft.AspNet.OutputCache {
             OutputCacheHelper.ResetFromHttpCachePolicySettings(settings, context.Timestamp, response);
         }
 
-        private static bool EnsureContentEncodingAcceptable(CachedVary cachedVary, HttpRequest request,
+        private static bool IsContentEncodingAcceptable(CachedVary cachedVary, HttpRequest request,
             HttpRawResponse rawResponse) {
             // ensure Content-Encoding is acceptable
             if (cachedVary?.ContentEncodings != null) {
                 return true;
             }
-            string acceptEncoding = request.Headers["Accept-Encoding"];
+            string acceptEncoding = request.Headers[HttpRequestHeaders.AcceptEncoding];
             NameValueCollection headers = rawResponse.Headers;
             if (headers == null) {
                 return OutputCacheHelper.IsAcceptableEncoding(null, acceptEncoding);
             }
-            string contentEncoding = headers.Cast<string>().FirstOrDefault(h => h == "Content-Encoding");
+            string contentEncoding = headers.Cast<string>().FirstOrDefault(h => h == HttpRequestHeaders.ContentEncoding);
             return OutputCacheHelper.IsAcceptableEncoding(contentEncoding, acceptEncoding);
         }
 
-        private async Task<bool> CheckHeadersToDetermineAcceptCachedCopyAsync(string key, HttpCachePolicySettings settings,
-            HttpRequest request, HttpContext context) {
+        private bool CheckHeaders(HttpCachePolicySettings settings, HttpRequest request, HttpContext context) {
             if (!settings.HasValidationPolicy()) {
-                if (request.Headers["Cache-Control"] != null) {
-                    string[] cacheDirectives = request.Headers["Cache-Control"].Split(s_fieldSeparators);
+                if (request.Headers[HttpRequestHeaders.CacheControl] != null) {
+                    string[] cacheDirectives = request.Headers[HttpRequestHeaders.CacheControl].Split(s_fieldSeparators);
                     foreach (string directive in cacheDirectives) {
-                        if (directive == "no-cache" || directive == "no-store") {
-                            Debug.WriteLine(SR.OutputCacheModuleEnter,
-                                SR.Skipping_lookup_because_of_Cache_Control_no_cache_or_no_store_directive + "OutputCacheModule::Enter");
+                        if (checkMaxAge(directive, settings, context))
                             return true;
-                        }
-                        if (directive.StartsWith("max-age=")) {
-                            int maxage;
-                            try {
-                                int.TryParse(directive.Substring(8), out maxage);
-                            }
-                            catch {
-                                maxage = -1;
-                            }
-
-                            if (maxage < 0) {
-                                continue;
-                            }
-                            int age =
-                                (int)
-                                    ((context.Timestamp.Ticks - settings.UtcTimestampCreated.Ticks)/
-                                     TimeSpan.TicksPerSecond);
-                            if (age < maxage) {
-                                continue;
-                            }
-                            Debug.WriteLine(SR.OutputCacheModuleEnter,
-                                SR.Not_returning_found_item_due_to_Cache_Control_max_age_directive + "OutputCacheModule::Enter");
-                            return true;
-                        }
-                        if (!directive.StartsWith("min-fresh=")) {
-                            continue;
-                        }
-                        int minfresh;
-                        try {
-                            minfresh = Convert.ToInt32(directive.Substring(10), CultureInfo.InvariantCulture);
-                        }
-                        catch {
-                            minfresh = -1;
-                        }
-
-                        if (minfresh < 0 || settings.UtcExpires == DateTime.MinValue || settings.SlidingExpiration) {
-                            continue;
-                        }
-                        int fresh =
-                            (int) ((settings.UtcExpires.Ticks - context.Timestamp.Ticks)/TimeSpan.TicksPerSecond);
-                        if (fresh >= minfresh) {
-                            continue;
-                        }
-                        Debug.WriteLine(SR.OutputCacheModuleEnter,
-                           SR.Not_returning_found_item_due_to_Cache_Control_min_fresh_directive + "OutputCacheModule::Enter");
-                        return true;
                     }
                 }
-                string pragma = request.Headers["Pragma"];
+                string pragma = request.Headers[HttpRequestHeaders.Pragma];
                 if (pragma == null) {
                     return false;
                 }
-                string[] pragmaDirectives = pragma.Split(s_fieldSeparators);
-                if (!pragmaDirectives.Any(t => t == null || t == "no-cache")) {
+                if (!pragma.Split(s_fieldSeparators).Any(t => t == null || t == CacheDirectives.NoCache)) {
                     return false;
                 }
-                Debug.WriteLine(SR.OutputCacheModuleEnter,
-                   SR.Skipping_lookup_because_of_Pragma_no_cache_directive + " OutputCacheModule::Enter");
                 return true;
             }
+            return false;
+        }
+        private async Task<bool> CheckValidityAsync(string key, HttpCachePolicySettings settings, HttpContext context) {
             if (settings.ValidationCallbackInfo == null || !settings.ValidationCallbackInfo.Any()) {
                 return false;
             }
@@ -446,9 +383,6 @@ namespace Microsoft.AspNet.OutputCache {
                 vci.Key(context, vci.Value, ref validationStatus);
                 switch (validationStatus) {
                     case HttpValidationStatus.Invalid:
-                        Debug.WriteLine(SR.OutputCacheModuleEnter,
-                          string.Format(SR.Output_cache_item_found_but_callback_invalidated_it,key) + " OutputCacheModule::Enter");
-
                         await _outputCacheHelper.RemoveAsync(key, context);
                         return true;
                     case HttpValidationStatus.IgnoreThisRequest:
@@ -457,34 +391,66 @@ namespace Microsoft.AspNet.OutputCache {
                     case HttpValidationStatus.Valid:
                         break;
                     default:
-                        Debug.WriteLine(SR.OutputCacheModuleEnter,
-                            string.Format(SR.Invalid_validation_status, validationStatus, key));
                         validationStatus = validationStatusFinal;
                         break;
                 }
             }
-
             if (validationStatusFinal == HttpValidationStatus.IgnoreThisRequest) {
-                Debug.WriteLine(SR.OutputCacheModuleEnter,
-                   string.Format(SR.Callback_status_is_IgnoreThisRequest, key) + " OutputCacheModule::Enter");
                 return true;
             }
-
-            Debug.Assert(validationStatusFinal == HttpValidationStatus.Valid,
-                "validationStatusFinal == HttpValidationStatus.Valid");
             return false;
         }
 
-        private static bool IsValidHttpMethod(HttpRequest request) {
+
+        private bool checkMaxAge(string directive, HttpCachePolicySettings settings, HttpContext context) {
+            if (directive == CacheDirectives.NoCache || directive == CacheDirectives.NoStore) {
+                return true;
+            }
+            if (directive.StartsWith(CacheDirectives.MaxAge)) {
+                int maxage;
+                try {
+                    int.TryParse(directive.Substring(8), out maxage);
+                }
+                catch {
+                    maxage = -1;
+                }
+
+                if (maxage < 0) {
+                    return false;
+                }
+                int age =
+                    (int)
+                        ((context.Timestamp.Ticks - settings.UtcTimestampCreated.Ticks) /
+                         TimeSpan.TicksPerSecond);
+                if (age < maxage) {
+                    return false;
+                }
+                return true;
+            }
+            if (!directive.StartsWith(CacheDirectives.MinFresh)) {
+                return false;
+            }
+            int minfresh = -1;
+            Int32.TryParse((directive.Substring(10)), out minfresh);
+
+            if (minfresh < 0 || settings.UtcExpires == DateTime.MinValue || settings.SlidingExpiration) {
+                return false;
+            }
+            int fresh =
+                (int)((settings.UtcExpires.Ticks - context.Timestamp.Ticks) / TimeSpan.TicksPerSecond);
+            if (fresh >= minfresh) {
+                return false;
+            }
+            return true;
+        }
+        private static bool IsHttpMethodSupported(HttpRequest request) {
             // Check if the request can be resolved for this method.       
             switch (request.HttpMethod) {
-                case "HEAD":
-                case "GET":
-                case "POST":
+                case HttpMethods.HEAD:
+                case HttpMethods.GET:
+                case HttpMethods.POST:
                     break;
                 default:
-                    Debug.WriteLine("Http "
-                        +SR.method_is_not + "GET, POST, or HEAD."+ SR.Returning_from + " OutputCacheModule::Enter");
                     return false;
             }
             return true;
@@ -494,7 +460,7 @@ namespace Microsoft.AspNet.OutputCache {
             object item = null;
             // If we have one, create a new cache key for it (this is a must)
             if (cachedVary == null) {
-                return new CachedItem() {DoReturn = false, Item = null};
+                return new CachedItem() { DoReturn = false, Item = null };
             }
             /*
                  * This cached output has a Vary policy. Create a new key based 
@@ -504,9 +470,7 @@ namespace Microsoft.AspNet.OutputCache {
                  */
             string key = OutputCacheHelper.CreateOutputCachedItemKey(context, cachedVary);
             if (key == null) {
-                Debug.WriteLine(SR.OutputCacheModuleEnter,
-                   string.Format(SR.Miss_key_could_not_be_created_for_varyby_item,"Vary-By") + " OutputCacheModule::Enter");
-                return new CachedItem {DoReturn = true, Item = null};
+                return new CachedItem { DoReturn = true, Item = null };
             }
             if (cachedVary.ContentEncodings == null) {
                 // With the new key, look up the in-memory key.
@@ -515,7 +479,7 @@ namespace Microsoft.AspNet.OutputCache {
             }
             else {
                 bool identityIsAcceptable = true;
-                string acceptEncoding = context.Request.Headers.GetKey(22);
+                string acceptEncoding = context.Request.Headers[HttpRequestHeaders.AcceptEncoding];
                 if (acceptEncoding != null) {
                     string[] contentEncodings = cachedVary.ContentEncodings;
                     int startIndex = 0;
@@ -546,48 +510,41 @@ namespace Microsoft.AspNet.OutputCache {
                     item = await _outputCacheHelper.GetAsync(key);
                 }
             }
-            if (item != null && ((CachedRawResponse) item).CachedVaryId == cachedVary.CachedVaryId) {
-                return new CachedItem {DoReturn = false, Item = item};
+            if (item != null && ((CachedRawResponse)item).CachedVaryId == cachedVary.CachedVaryId) {
+                return new CachedItem { DoReturn = false, Item = item };
             }
             if (item != null) {
                 // explicitly remove entry because _cachedVaryId does not match
                 await _outputCacheHelper.RemoveAsync(key, context);
             }
-            return new CachedItem {DoReturn = true, Item = item};
+            return new CachedItem { DoReturn = true, Item = item };
         }
 
-        private static bool CheckHasQueryStringOrFormPost(HttpRequest request, string key, CachedVary cachedVary,
-            HttpCachePolicySettings settings) {
+        private static bool CheckCachedVary(HttpRequest request, CachedVary cachedVary,
+           HttpCachePolicySettings settings) {
             // From this point on, we have an entry to work with.
             if (cachedVary == null && !settings.IgnoreParams) {
                 // This cached output has no vary policy, so make sure it doesn't have a query string or form post.
-                if (request.HttpMethod == "POST") {
-                    Debug.WriteLine(SR.OutputCacheModuleEnter,
-                       string.Format(SR.Method_is_POST_and_no_VaryByParam_specified, "POST", "VaryByParam", key) +
-                        " OutputCacheModule::Enter");
+                if (request.HttpMethod == HttpMethods.POST) {
                     return true;
                 }
                 if (request.QueryString.Count > 0) {
-                    Debug.WriteLine(SR.OutputCacheModuleEnter,
-                       string.Format(SR.Contains_querystring_and_no_VaryByParam_specified, " querystring ", " VaryByParam ", key) +
-                        " OutputCacheModule::Enter");
                     return true;
                 }
             }
-            if (!settings.IgnoreRangeRequests) {
-                return false;
-            }
-            string rangeHeader = request.Headers["Range"];
-            if (!rangeHeader.StartsWith("bytes", StringComparison.OrdinalIgnoreCase)) {
-                return false;
-            }
-            Debug.WriteLine(SR.OutputCacheModuleEnter,
-               string.Format(SR.Range_request_and_IgnoreRangeRequests_is_true, " Range request ", " IgnoreRangeRequests ", key) +
-                " OutputCacheModule::Enter");
-            // Don't record this as a cache miss. The response for a range request is not cached, and so
-            // we don't want to pollute the cache hit/miss ratio.
-            return true;
+            return false;
         }
+
+        private static bool IsRangeRequest(HttpRequest request) {
+            // Don't record this if as a cache miss. The response for a range request is not cached, and so
+            // we don't want to pollute the cache hit/miss ratio.
+            string rangeHeader = request.Headers[HttpRequestHeaders.Range];
+            if (rangeHeader.StartsWith("bytes", StringComparison.OrdinalIgnoreCase)) {
+                return true;
+            }
+            return false;
+        }
+
     }
 
     class CachedItem {

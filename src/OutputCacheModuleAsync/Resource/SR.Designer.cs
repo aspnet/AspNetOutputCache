@@ -61,24 +61,6 @@ namespace Microsoft.AspNet.OutputCache.Resource {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Adding response to cache. Key = &apos;{0}&apos;.
-        /// </summary>
-        internal static string Adding_response_to_cache {
-            get {
-                return ResourceManager.GetString("Adding_response_to_cache", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Output cache item found but callback status is IgnoreThisRequest. Key = &apos;{0}&apos;. Returning from.
-        /// </summary>
-        internal static string Callback_status_is_IgnoreThisRequest {
-            get {
-                return ResourceManager.GetString("Callback_status_is_IgnoreThisRequest", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Cannot get snapshot if not buffered..
         /// </summary>
         internal static string Cannot_get_snapshot_if_not_buffered {
@@ -97,83 +79,11 @@ namespace Microsoft.AspNet.OutputCache.Resource {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Output cache item found but contains a {0} and no {1} specified. Key=&apos;{2}&apos;. Returning from.
-        /// </summary>
-        internal static string Contains_querystring_and_no_VaryByParam_specified {
-            get {
-                return ResourceManager.GetString("Contains_querystring_and_no_VaryByParam_specified", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Couldn&apos;t add non-cacheable post. Key =&apos;{0}&apos;.
-        /// </summary>
-        internal static string Couldnot_add_non_cacheable_post {
-            get {
-                return ResourceManager.GetString("Couldnot_add_non_cacheable_post", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Hit, conditional request satisfied, status=304. Key=&apos;{0}&apos;. Returning from.
-        /// </summary>
-        internal static string Hit_conditional_request_satisfied {
-            get {
-                return ResourceManager.GetString("Hit_conditional_request_satisfied", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Ignore If-Modified-Since header, invalid format: &apos;{0}&apos;.
-        /// </summary>
-        internal static string Ignore_IfModifiedSince_header {
-            get {
-                return ResourceManager.GetString("Ignore_IfModifiedSince_header", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Invalid validation status, ignoring it, status = &apos;{0}&apos;. Key = &apos;{1}&apos;.
-        /// </summary>
-        internal static string Invalid_validation_status {
-            get {
-                return ResourceManager.GetString("Invalid_validation_status", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to method is not.
-        /// </summary>
-        internal static string method_is_not {
-            get {
-                return ResourceManager.GetString("method_is_not", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Output cache item found but method is {0} and no {1} specified. Key=&apos;{2}&apos;. Returning from.
-        /// </summary>
-        internal static string Method_is_POST_and_no_VaryByParam_specified {
-            get {
-                return ResourceManager.GetString("Method_is_POST_and_no_VaryByParam_specified", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Microsoft.AspNet.OutputCache Default In-Memory Provider.
         /// </summary>
         internal static string Microsoft_AspNet_OutputCache_Default_InMemory_Provider {
             get {
                 return ResourceManager.GetString("Microsoft_AspNet_OutputCache_Default_InMemory_Provider", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Miss, key could not be created for {0} item. Returning from.
-        /// </summary>
-        internal static string Miss_key_could_not_be_created_for_varyby_item {
-            get {
-                return ResourceManager.GetString("Miss_key_could_not_be_created_for_varyby_item", resourceCulture);
             }
         }
         
@@ -187,101 +97,11 @@ namespace Microsoft.AspNet.OutputCache.Resource {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Not returning found item due to Cache-Control: max-age directive. Returning from.
-        /// </summary>
-        internal static string Not_returning_found_item_due_to_Cache_Control_max_age_directive {
-            get {
-                return ResourceManager.GetString("Not_returning_found_item_due_to_Cache_Control_max_age_directive", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Not returning found item due to Cache-Control: min-fresh directive. Returning from.
-        /// </summary>
-        internal static string Not_returning_found_item_due_to_Cache_Control_min_fresh_directive {
-            get {
-                return ResourceManager.GetString("Not_returning_found_item_due_to_Cache_Control_min_fresh_directive", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Output cache item found but callback invalidated it. key= &apos;{0}&apos;. Returning from.
-        /// </summary>
-        internal static string Output_cache_item_found_but_callback_invalidated_it {
-            get {
-                return ResourceManager.GetString("Output_cache_item_found_but_callback_invalidated_it", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to OutputCacheModuleEnter.
-        /// </summary>
-        internal static string OutputCacheModuleEnter {
-            get {
-                return ResourceManager.GetString("OutputCacheModuleEnter", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to OutputCache Module Leave.
-        /// </summary>
-        internal static string OutputCacheModuleLeave {
-            get {
-                return ResourceManager.GetString("OutputCacheModuleLeave", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Provider does not support policy for responses..
         /// </summary>
         internal static string Provider_does_not_support_policy_for_responses {
             get {
                 return ResourceManager.GetString("Provider_does_not_support_policy_for_responses", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Output cache item found but this is a {0} and {1} is true. Key=&apos;{2}&apos;. Returning from.
-        /// </summary>
-        internal static string Range_request_and_IgnoreRangeRequests_is_true {
-            get {
-                return ResourceManager.GetString("Range_request_and_IgnoreRangeRequests_is_true", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Response.Flush() inside GetAsyncVaryByCustomstring key =&apos;{0}&apos;.
-        /// </summary>
-        internal static string Response_Flush_inside_GetVaryByCustomstring {
-            get {
-                return ResourceManager.GetString("Response_Flush_inside_GetVaryByCustomstring", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Returning from.
-        /// </summary>
-        internal static string Returning_from {
-            get {
-                return ResourceManager.GetString("Returning_from", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Skipping lookup because of Cache-Control: no-cache or no-store directive. Returning from.
-        /// </summary>
-        internal static string Skipping_lookup_because_of_Cache_Control_no_cache_or_no_store_directive {
-            get {
-                return ResourceManager.GetString("Skipping_lookup_because_of_Cache_Control_no_cache_or_no_store_directive", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Skipping lookup because of Pragma: no-cache directive. Returning from.
-        /// </summary>
-        internal static string Skipping_lookup_because_of_Pragma_no_cache_directive {
-            get {
-                return ResourceManager.GetString("Skipping_lookup_because_of_Pragma_no_cache_directive", resourceCulture);
             }
         }
         

@@ -3,7 +3,7 @@
     using System;
     using System.Threading.Tasks;
 
-    class TaskAsyncHelper {
+    static class TaskAsyncHelper {
         /// Assists in converting an method written using the Task Asynchronous Pattern to a Begin/End method pair 
         public static IAsyncResult BeginTask(Func<Task> taskFunc, AsyncCallback callback, object state) {
             Task task = taskFunc();

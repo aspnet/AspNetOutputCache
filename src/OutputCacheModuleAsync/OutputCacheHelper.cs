@@ -12,16 +12,19 @@
     using System.Diagnostics;
     using System.IO;
     using Microsoft.AspNet.OutputCache.Resource;
+    using System.Runtime.Caching;
 
     class OutputCacheHelper {
         private const int MaxPostKeyLength = 15000;
         private const string NullVarybyValue = "+n+";
-        internal const string TagOutputcache = "OutputCache";
+        const string TagOutputcache = "OutputCache";
         private const string OutputcacheKeyprefixPost = "a1";
         private const string OutputcacheKeyprefixGet = "a2";
         private const string Identity = "identity";
         private const string Asterisk = "*";
         private const string OutputcacheKeyprefixDependencies = "Microsoft.AspNet.OutputCache.Dependencies";
+        private MemoryCache _memoryCache;
+        private MemoryCache MemoryCache => _memoryCache ?? (_memoryCache = new MemoryCache("MemoryCache"));
         private InMemoryOutputCacheProvider _inMemoryOutputCacheProvider;
 
         private InMemoryOutputCacheProvider InMemoryOutputCacheProvider => _inMemoryOutputCacheProvider ??
@@ -61,7 +64,7 @@
                 return false;
             }
             // is the file dependency already in the in-memory cache?
-            if (InMemoryOutputCacheProvider.Get(depKey) != null) {
+            if (MemoryCache.Get(depKey) != null) {
                 return false;
             }
             // deserialize the file dependencies
@@ -79,11 +82,11 @@
                 var dcew = new DependencyCacheEntryWrapper {
                     DependencyCacheEntry = dce,
                     Dependencies = dep,
-                    CacheItemPriority = CacheItemPriority.Normal,
+                    CacheItemPriority = System.Web.Caching.CacheItemPriority.Normal,
                     DependencyCacheTimeSpan = Cache.NoSlidingExpiration,
                     DependencyRemovedCallback = null
                 };
-                InMemoryOutputCacheProvider.Add(depKey, dcew, DateTimeOffset.MaxValue);
+                MemoryCache.Add(depKey, dcew, DateTimeOffset.MaxValue);
                 return false;
             }
             // file dependencies have changed
@@ -243,7 +246,7 @@
                     var dcew = new DependencyCacheEntryWrapper {
                         DependencyCacheEntry = dce,
                         Dependencies = dependencies,
-                        CacheItemPriority = CacheItemPriority.Normal,
+                        CacheItemPriority = System.Web.Caching.CacheItemPriority.Normal,
                         DependencyCacheTimeSpan = Cache.NoSlidingExpiration,
                         DependencyRemovedCallback = null
                     };
@@ -341,7 +344,6 @@
                 MaxAge = response.Cache.GetMaxAge(),
                 SlidingExpiration = response.Cache.HasSlidingExpiration(),
                 IgnoreRangeRequests = response.Cache.GetIgnoreRangeRequests(),
-                ValidUntilExpires = response.Cache.IsValidUntilExpires(),
                 UtcLastModified = response.Cache.GetUtcLastModified(),
                 ETag = response.Cache.GetETag(),
                 GenerateLastModifiedFromFiles = response.Cache.GetLastModifiedFromFileDependencies(),
@@ -412,7 +414,7 @@
                 sb.Append(utcFileLastModifiedMax.Ticks.ToString(CultureInfo.InvariantCulture));
                 response.Cache.SetETag("\"" +
                                        System.Convert.ToBase64String(
-                                           CryptoUtil.ComputeSha256Hash(Encoding.UTF8.GetBytes(sb.ToString()))) + "\"");
+                                           CryptoUtil.ComputeHash(Encoding.UTF8.GetBytes(sb.ToString()))) + "\"");
                 if (!response.Cache.GetLastModifiedFromFileDependencies())
                     return;
             }
@@ -469,7 +471,7 @@
             string verb,
             HttpContext context,
             CachedVary cachedVary) {
-            StringBuilder sb = verb == "POST"
+            StringBuilder sb = verb == HttpMethods.POST
                 ? new StringBuilder(OutputcacheKeyprefixPost, path.Length + OutputcacheKeyprefixPost.Length)
                 : new StringBuilder(OutputcacheKeyprefixGet, path.Length + OutputcacheKeyprefixGet.Length);
             sb.Append(CultureInfo.InvariantCulture.TextInfo.ToLower(path));
@@ -494,8 +496,6 @@
                         }
                         break;
                     case 1:
-                        Debug.Assert(cachedVary.Params == null || !cachedVary.VaryByAllParams,
-                            "cachedVary._params == null || !cachedVary._varyByAllParams");
                         sb.Append("Q");
                         a = cachedVary.Params;
                         if ((a != null || cachedVary.VaryByAllParams)) {
@@ -504,10 +504,8 @@
                         }
                         break;
                     default:
-                        Debug.Assert(cachedVary.Params == null || !cachedVary.VaryByAllParams,
-                            "cachedVary._params == null || !cachedVary._varyByAllParams");
                         sb.Append("F");
-                        if (verb == "POST") {
+                        if (verb == HttpMethods.POST) {
                             a = cachedVary.Params;
                             if ((a != null || cachedVary.VaryByAllParams)) {
                                 col = request.Form;
@@ -516,7 +514,6 @@
                         }
                         break;
                 }
-                Debug.Assert(a == null || !getAllParams, "a == null || !getAllParams");
                 /* handle all params case (VaryByParams[*] = true) */
                 int i;
                 if (getAllParams && col.Count > 0) {
@@ -561,7 +558,7 @@
                  * part of the key.
                  */
             sb.Append("D");
-            if (verb == "POST" &&
+            if (verb == HttpMethods.POST &&
                 cachedVary.VaryByAllParams &&
                 request.Form.Count == 0) {
 
@@ -574,7 +571,7 @@
                         request.InputStream.CopyTo(ms);
                         byte[] buf = ms.ToArray();
                         // Use SHA256 to generate a collision-free hash of the input data
-                        value = System.Convert.ToBase64String((CryptoUtil.ComputeSha256Hash(buf)));
+                        value = System.Convert.ToBase64String((CryptoUtil.ComputeHash(buf)));
                         sb.Append(value);
                     }
                 }

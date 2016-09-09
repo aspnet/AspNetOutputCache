@@ -21,7 +21,6 @@
                 return !SlidingExpiration && !GenerateLastModifiedFromFiles && !GenerateEtagFromFiles
                        && ValidationCallbackInfo == null;
             }
-            set { }
         }
 
         public DateTime UtcLastModified { get; set; }

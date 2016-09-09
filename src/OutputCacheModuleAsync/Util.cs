@@ -5,7 +5,7 @@
     using System.Globalization;
     using System.Security.Cryptography;
 
-    internal class InvariantComparer : IComparer {
+    class InvariantComparer : IComparer {
         private readonly CompareInfo _mCompareInfo;
         public static InvariantComparer Default = new InvariantComparer();
 
@@ -22,15 +22,15 @@
         }
     }
 
-    internal class CryptoUtil {
+    class CryptoUtil {
         /// <summary>
         /// Computes the SHA256 hash of a given input.
         /// </summary>
         /// <param Name="input">The input over which to compute the hash.</param>
         /// <param name="input"></param>
         /// <returns>The binary hash (32 bytes) of the input.</returns>
-        public static byte[] ComputeSha256Hash(byte[] input) {
-            return ComputeSha256Hash(input, 0, input.Length);
+        public static byte[] ComputeHash(byte[] input) {
+            return ComputeHash(input, 0, input.Length);
         }
 
         /// <summary>
@@ -43,7 +43,7 @@
         /// <param name="offset"></param>
         /// <param name="count"></param>
         /// <returns>The binary hash (32 bytes) of the buffer segment.</returns>
-        public static byte[] ComputeSha256Hash(byte[] buffer, int offset, int count) {
+        public static byte[] ComputeHash(byte[] buffer, int offset, int count) {
 
             using (SHA256 sha256 = new SHA256Cng()) {
                 return sha256.ComputeHash(buffer, offset, count);
@@ -51,8 +51,8 @@
         }
     }
 
-    internal class HttpDate {
-        private static readonly int[] s_tensDigit = {0, 10, 20, 30, 40, 50, 60, 70, 80, 90};
+    class HttpDate {
+        private static readonly int[] s_tensDigit = { 0, 10, 20, 30, 40, 50, 60, 70, 80, 90 };
 
         private static int Atoi2(string s, int startIndex) {
             try {
@@ -95,7 +95,7 @@
                 // ok, we need to look at the second character
                 //
                 switch (monthIndex) {
-                    case (sbyte) 'N':
+                    case (sbyte)'N':
                         //
                         // we got an N which we need to resolve further
                         //
@@ -103,14 +103,14 @@
                         // if s[1] is 'u' then Jun, if 'a' then Jan
                         //
                         monthIndex =
-                            (sbyte) (s_monthIndexTable[(s[1 + startIndex] - 0x40) & 0x3f] == (sbyte) 'A' ? 1 : 6);
+                            (sbyte)(s_monthIndexTable[(s[1 + startIndex] - 0x40) & 0x3f] == (sbyte)'A' ? 1 : 6);
                         break;
-                    case (sbyte) 'R':
+                    case (sbyte)'R':
                         //
                         // if s[1] is 'a' then March, if 'p' then April
                         //
                         monthIndex =
-                            (sbyte) (s_monthIndexTable[(s[1 + startIndex] - 0x40) & 0x3f] == (sbyte) 'A' ? 3 : 4);
+                            (sbyte)(s_monthIndexTable[(s[1 + startIndex] - 0x40) & 0x3f] == (sbyte)'A' ? 3 : 4);
                         break;
                     default:
                         throw new FormatException("MakeMonthBadstring");
@@ -130,7 +130,7 @@
             throw new FormatException("MakeMonthBadstring");
         }
 
-        internal static DateTime UtcParse(string time) {
+       public static DateTime UtcParse(string time) {
             int i;
             int year, month, day, hour, minute, second;
             if (time == null) {
@@ -142,7 +142,7 @@
                 // or: Thu, 10 Jan 1993 01:29:59 GMT */
                 //
                 int length = time.Length - i;
-                while (--length > 0 && time[++i] == ' ') {}
+                while (--length > 0 && time[++i] == ' ') { }
                 if (time[i + 2] == '-') {
                     /* First format */
                     if (length < 18) {
@@ -168,7 +168,7 @@
                     }
                     day = Atoi2(time, i);
                     month = make_month(time, i + 3);
-                    year = Atoi2(time, i + 7)*100 + Atoi2(time, i + 9);
+                    year = Atoi2(time, i + 7) * 100 + Atoi2(time, i + 9);
                     hour = Atoi2(time, i + 12);
                     minute = Atoi2(time, i + 15);
                     second = Atoi2(time, i + 18);
@@ -178,13 +178,13 @@
                 /* Try the other format:  Wed Jun 09 01:29:59 1993 GMT */
                 i = -1;
                 int length = time.Length + 1;
-                while (--length > 0 && time[++i] == ' ') {}
+                while (--length > 0 && time[++i] == ' ') { }
                 if (length < 24) {
                     throw new FormatException("UtilParseDateTimeBad");
                 }
                 day = Atoi2(time, i + 8);
                 month = make_month(time, i + 4);
-                year = Atoi2(time, i + 20)*100 + Atoi2(time, i + 22);
+                year = Atoi2(time, i + 20) * 100 + Atoi2(time, i + 22);
                 hour = Atoi2(time, i + 11);
                 minute = Atoi2(time, i + 14);
                 second = Atoi2(time, i + 17);
@@ -193,7 +193,7 @@
         }
     }
 
-    internal class StringUtil {
+    class StringUtil {
         public static bool StringArrayEquals(string[] a, string[] b) {
             if ((a == null) != (b == null)) {
                 return false;

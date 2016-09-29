@@ -3,7 +3,7 @@
  
   <ItemGroup>
     <AssemblyProject Include="src\OutputCacheModuleAsync\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.csproj" />
-    <AssemblyProject Include="src\CustomOutputCacheProvider\Microsoft.AspNet.OutputCache.CustomOutputCacheProvider.csproj" />
+    <AssemblyProject Include="test\CustomOutputCacheProvider\Microsoft.AspNet.OutputCache.CustomOutputCacheProvider.csproj" />
   </ItemGroup>
   <ItemGroup Condition="'$(BuildCoreOnly)' != 'true'">
     <AssemblyProject Include="test\Microsoft.AspNet.OutputCache.CustomOutputCacheProvider.Test\Microsoft.AspNet.OutputCache.CustomOutputCacheProvider.Test.csproj" />

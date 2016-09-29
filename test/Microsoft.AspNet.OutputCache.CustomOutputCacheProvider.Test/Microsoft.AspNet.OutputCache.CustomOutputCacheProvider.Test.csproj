@@ -73,7 +73,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\CustomOutputCacheProvider\Microsoft.AspNet.OutputCache.CustomOutputCacheProvider.csproj">
+    <ProjectReference Include="..\..\test\CustomOutputCacheProvider\Microsoft.AspNet.OutputCache.CustomOutputCacheProvider.csproj">
       <Project>{493b0482-572a-4465-bd52-4094351c2647}</Project>
       <Name>Microsoft.AspNet.OutputCache.CustomOutputCacheProvider</Name>
     </ProjectReference>

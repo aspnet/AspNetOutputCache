@@ -1,6 +1,6 @@
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="tools\MicrosoftAspNetOutputCache.settings.targets"/>
-
+ 
   <ItemGroup>
     <AssemblyProject Include="src\OutputCacheModuleAsync\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.csproj" />
     <AssemblyProject Include="src\CustomOutputCacheProvider\Microsoft.AspNet.OutputCache.CustomOutputCacheProvider.csproj" />
@@ -28,7 +28,7 @@
 
   <!-- Packages build -->
 
-  <Target Name="BuildPackages" DependsOnTargets="CopyInstallScripts;RestorePackages">
+   <Target Name="BuildPackages" DependsOnTargets="RestorePackages">
     <MSBuild Targets="" Projects="@(PackageProject)" />
   </Target>
 

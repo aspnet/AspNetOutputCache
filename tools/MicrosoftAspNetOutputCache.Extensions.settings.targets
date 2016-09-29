@@ -17,53 +17,15 @@
     </PropertyGroup>
 
 
-    <!-- CodeSign definitions -->
+    <Import Project="$(MSBuildThisFileDirectory)CI\CITask.targets" Condition="Exists('$(MSBuildThisFileDirectory)CI\CITask.targets')"/>
 
-    <PropertyGroup>
-        
-        <CodeSignEnabled Condition="'$(Sign)' == 'Sign'">true</CodeSignEnabled>
-        <CodeSignEnabled Condition="'$(BuildingTestProject)' == 'true'">false</CodeSignEnabled>
-        <CodeSignEnabled Condition="'$(CodeSignEnabled)' == ''">false</CodeSignEnabled>
-        <CodeSignTest Condition="'$(TestCodeSign)' != ''">$(TestCodeSign)</CodeSignTest>
-    </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyPath Condition="'$(CodeSignEnabled)' == 'true'">$(CodeSignOutputPath)</AssemblyPath>
+    <AssemblyPath Condition="'$(AssemblyPath)' == ''">$(OutputPath)</AssemblyPath>
+  </PropertyGroup>
 
-    <PropertyGroup Condition="'$(CodeSignEnabled)' == 'true'">
-        <CodeSignSnCert Condition="'$(MSBuildProjectExtension)' == '.csproj'">72</CodeSignSnCert>
-        <CodeSignDisplayName>Microsoft ASP.NET</CodeSignDisplayName>
-        <CodeSignDisplayUrl>http://www.asp.net/</CodeSignDisplayUrl>
-        <CodeSignDescription>Signing binaries for ASP.NET Async OutputCache module</CodeSignDescription>
-        <CodeSignApprovers Condition="'$(CodeSignApprovers)' == ''">joeloff;elipton</CodeSignApprovers>
-        <CodeSignOutputPath Condition="'$(CodeSignOutputPath)' == ''">$(BinPath)Signed\</CodeSignOutputPath>
-        <CodeSignIntermediateOutputPath Condition="'$(CodeSignIntermediateOutputPath)' == ''">$(ObjPath)CodeSign\</CodeSignIntermediateOutputPath>
-    </PropertyGroup>
-
-  
-    <PropertyGroup>
-        <AssemblyPath Condition="'$(CodeSignEnabled)' == 'true'">$(CodeSignOutputPath)</AssemblyPath>
-        <AssemblyPath Condition="'$(AssemblyPath)' == ''">$(OutputPath)</AssemblyPath>
-    </PropertyGroup> 
-
-
-    <PropertyGroup>
-        <CustomAfterProjectTargets>$(MSBuildThisFileDirectory)MicrosoftAspNetOutputCache.Extensions.targets</CustomAfterProjectTargets>
-    </PropertyGroup>
-
-<!--
-    <ItemGroup>
-        <CodeSign Include="$(OutputPath)Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.dll">
-            <AuthCodeCert>10006</AuthCodeCert>
-            <StrongNameCert>72</StrongNameCert>
-        </CodeSign>
-        <CodeSign Include="$(OutputPath)Microsoft.AspNet.OutputCache.CustomOutputCacheProvider.dll">
-            <AuthCodeCert>10006</AuthCodeCert>
-            <StrongNameCert>72</StrongNameCert>
-        </CodeSign>
-        <CodeSign Include="$(RepositoryRootEx)src\Packages\OutputCacheModuleAsync.nupkg\tools\*.ps1">
-            <AuthCodeCert>10006</AuthCodeCert>
-        </CodeSign>
- <CodeSign Include="$(RepositoryRootEx)src\Packages\CustomOutputCacheProvider.nupkg\tools\*.ps1">
-            <AuthCodeCert>10006</AuthCodeCert>
-        </CodeSign>
-    </ItemGroup>  
--->
+  <PropertyGroup>
+    <CustomAfterProjectTargets>$(MSBuildThisFileDirectory)MicrosoftAspNetOutputCache.Extensions.targets</CustomAfterProjectTargets>
+  </PropertyGroup>
 </Project>
+

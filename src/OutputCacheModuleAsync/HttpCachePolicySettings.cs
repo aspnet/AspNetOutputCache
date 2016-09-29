@@ -3,7 +3,8 @@
     using System.Collections.Generic;
     using System.Web;
     using System.Linq;
-    class HttpCachePolicySettings {
+
+    sealed class HttpCachePolicySettings {
         public HttpCacheability Cacheability { get; set; }
         public IEnumerable<KeyValuePair<HttpCacheValidateHandler, object>> ValidationCallbackInfo { get; set; }
         public bool IgnoreRangeRequests { get; set; }

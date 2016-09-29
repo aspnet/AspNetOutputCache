@@ -7,6 +7,5 @@
         public string StatusDescription { get; set; }
         public NameValueCollection Headers { get; set; }
         public ArrayList Buffers { get; set; }
-        public bool HasSubstBlocks { get; set; }
     }
 }

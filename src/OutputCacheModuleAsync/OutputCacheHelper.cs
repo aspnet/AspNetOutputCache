@@ -9,29 +9,28 @@
     using System.Collections.Specialized;
     using System.Text;
     using System.Globalization;
-    using System.Diagnostics;
     using System.IO;
-    using Microsoft.AspNet.OutputCache.Resource;
+    using Resource;
     using System.Runtime.Caching;
 
-    class OutputCacheHelper {
+    static class OutputCacheHelper {
+        private static readonly char[] s_fieldSeparators = { ',', ' ' };
         private const int MaxPostKeyLength = 15000;
         private const string NullVarybyValue = "+n+";
-        const string TagOutputcache = "OutputCache";
+        private const string TagOutputcache = "OutputCache";
         private const string OutputcacheKeyprefixPost = "a1";
         private const string OutputcacheKeyprefixGet = "a2";
         private const string Identity = "identity";
         private const string Asterisk = "*";
         private const string OutputcacheKeyprefixDependencies = "Microsoft.AspNet.OutputCache.Dependencies";
-        private MemoryCache _memoryCache;
-        private MemoryCache MemoryCache => _memoryCache ?? (_memoryCache = new MemoryCache("MemoryCache"));
-        private InMemoryOutputCacheProvider _inMemoryOutputCacheProvider;
-
-        private InMemoryOutputCacheProvider InMemoryOutputCacheProvider => _inMemoryOutputCacheProvider ??
+        private static MemoryCache _memoryCache;
+        private static MemoryCache MemoryCache => _memoryCache ?? (_memoryCache = new MemoryCache("MemoryCache"));
+        private static InMemoryOutputCacheProvider _inMemoryOutputCacheProvider;
+        private static InMemoryOutputCacheProvider InMemoryOutputCacheProvider => _inMemoryOutputCacheProvider ??
                                                                            (_inMemoryOutputCacheProvider =
                                                                                new InMemoryOutputCacheProvider());
 
-        private async Task RemoveFromProvider(string key, string providerName) {
+        private static async Task RemoveFromProvider(string key, string providerName) {
             OutputCacheProviderAsync provider;
             // we know where it is.  If providerName is given,
             // then it is in that provider.  If it's not given,
@@ -48,7 +47,7 @@
             }
         }
 
-        private OutputCacheProviderAsync GetProvider(HttpContext context) {
+        private static OutputCacheProviderAsync GetProvider(HttpContext context) {
             OutputCacheProviderAsync provider = null;
             string providerName = context.ApplicationInstance.GetOutputCacheProviderName(context);
             if (OutputCache.Providers != null) {
@@ -58,7 +57,8 @@
             return provider ?? InMemoryOutputCacheProvider;
         }
 
-        private bool HasDependencyChanged(string depKey, string[] fileDeps, string kernelKey, string oceKey,
+       
+        private static bool HasDependencyChanged(string depKey, string[] fileDeps, string kernelKey, string oceKey,
             string providerName) {
             if (depKey == null) {
                 return false;
@@ -94,20 +94,8 @@
             return true;
         }
 
-        private static OutputCacheEntry Convert(CachedRawResponse cachedRawResponse, string depKey,
-            string[] fileDependencies) {
-            NameValueCollection headers = cachedRawResponse.RawResponse.Headers;
-            ArrayList responseElements = null;
-            ArrayList buffers = cachedRawResponse.RawResponse.Buffers;
-            int count = buffers?.Count ?? 0;
-            for (int i = 0; i < count; i++) {
-                if (responseElements == null) {
-                    responseElements = new ArrayList(count);
-                }
-                // wrapper them as differnt type of responseelement then save into responseElement. why?
-                if (buffers != null) responseElements.Add(buffers[i]);
-            }
-            var oce = new OutputCacheEntry() {
+        private static OutputCacheEntry Convert(CachedRawResponse cachedRawResponse, string depKey, string[] fileDependencies) {
+            return new OutputCacheEntry() {
                 CachedVaryId = cachedRawResponse.CachedVaryId,
                 Settings = cachedRawResponse.CachePolicy,
                 KernelCacheUrl = cachedRawResponse.KernelCacheUrl,
@@ -115,47 +103,30 @@
                 Dependencies = fileDependencies,
                 StatusCode = cachedRawResponse.RawResponse.StatusCode,
                 StatusDescription = cachedRawResponse.RawResponse.StatusDescription,
-                HeaderElements = headers,
-                ResponseElements = responseElements
+                HeaderElements = cachedRawResponse.RawResponse.Headers,
+                ResponseBuffers = cachedRawResponse.RawResponse.Buffers
             };
-            return oce;
         }
 
         private static CachedRawResponse Convert(OutputCacheEntry oce) {
-            NameValueCollection headers = null;
-            if (oce.HeaderElements != null && oce.HeaderElements.Count > 0) {
-                headers = new NameValueCollection(oce.HeaderElements.Count);
-                foreach (string h in oce.HeaderElements.AllKeys) {
-                    headers.Add(h, oce.HeaderElements[h]);
-                }
-            }
-            ArrayList buffers;
-            if (oce.ResponseElements != null && oce.ResponseElements.Count > 0) {
-                buffers = new ArrayList(oce.ResponseElements.Count);
-                foreach (object bf in oce.ResponseElements) {
-                    buffers.Add(bf);
-                }
-            }
-            else {
-                buffers = new ArrayList();
-            }
-
             return new CachedRawResponse {
-                RawResponse =
-                    new HttpRawResponse {
+                RawResponse = new HttpRawResponse {
                         StatusCode = oce.StatusCode,
                         StatusDescription = oce.StatusDescription,
-                        Headers = headers,
-                        Buffers = buffers,
-                        HasSubstBlocks = false
-                    },
+                        Headers = oce.HeaderElements,
+                        Buffers = oce.ResponseBuffers !=null? oce.ResponseBuffers : new ArrayList()
+                },
                 CachePolicy = oce.Settings,
                 KernelCacheUrl = oce.KernelCacheUrl,
                 CachedVaryId = oce.CachedVaryId
             };
         }
 
-        public async Task<object> GetAsync(string key) {
+        public static async Task<object> GetItemAsync(string key) {
+            return await GetAsync(key);
+        }
+
+        private static async Task<object> GetAsync(string key) {
             OutputCacheProviderAsync provider = GetProvider(HttpContext.Current);
             object result = await provider.GetAsync(key);
             var oce = result as OutputCacheEntry;
@@ -170,7 +141,7 @@
             return result;
         }
 
-        public async Task RemoveAsync(string key, HttpContext context) {
+        private static async Task RemoveAsync(string key, HttpContext context) {
             // we don't know if it's in the internal cache or
             // one of the providers.  If a context is given,
             // then we can narrow down to at most one provider.
@@ -189,7 +160,7 @@
             }
         }
 
-        public async Task InsertResponseAsync(string cachedVaryKey,
+        private static async Task InsertResponseAsync(string cachedVaryKey,
             CachedVary cachedVary,
             string rawResponseKey,
             CachedRawResponse rawResponse,
@@ -230,11 +201,10 @@
                 // the ControlCachedVary and the PartialCachingCacheEntry
                 rawResponse.CachedVaryId = cachedVary.CachedVaryId;
             }
-            // Now insert into the cache (use cache provider if possible, otherwise use internal cache)
+            // Now insert into the cache
             if (dependencies != null) {
                 string depKey = OutputcacheKeyprefixDependencies + dependencies.GetUniqueID();
-                string[] fileDeps = dependencies.GetFileDependencies();
-                OutputCacheEntry oce = Convert(rawResponse, depKey, fileDeps);
+                OutputCacheEntry oce = Convert(rawResponse, depKey,  dependencies.GetFileDependencies());
                 await provider.SetAsync(rawResponseKey, oce, absExp);
                 {
                     // use Add and dispose dependencies if there's already one in the cache
@@ -258,17 +228,16 @@
             }
         }
 
-        public static bool IsCacheableEncoding(string coding, string[] contentEncodings) {
+        private static bool IsCacheableEncoding(Encoding contentEncoding, HttpCacheVaryByContentEncodings varyByContentEncodings) {
             // return true if we are not varying by content encoding.
-            if (contentEncodings == null) {
+            if (varyByContentEncodings == null) {
                 return true;
             }
-            // return true if there is no Content-Encoding header
-            return coding == null || contentEncodings.Any(contentEncoding => contentEncoding == coding);
-            // return true if the Content-Encoding header is listed
+            // return true if there is no Content-Encoding header or the Content-Encoding header is listed
+            return contentEncoding == null || varyByContentEncodings.GetContentEncodings().Any(varyByContentEncoding => varyByContentEncoding == contentEncoding.ToString());
         }
 
-        public static bool ContainsNonShareableCookies(HttpResponse response) {
+        private static bool ContainsNonShareableCookies(HttpResponse response) {
             HttpCookieCollection cookies = response.Cookies;
             for (int i = 0; i < cookies.Count; i++) {
                 HttpCookie httpCookie = cookies[i];
@@ -279,7 +248,7 @@
             return false;
         }
 
-        public static void UseSnapshot(HttpRawResponse rawResponse, bool sendBody, HttpResponse response) {
+        private static void UseSnapshot(HttpRawResponse rawResponse, bool sendBody, HttpResponse response) {
             if (response.HeadersWritten)
                 throw new HttpException(SR.Cannot_use_snapshot_after_headers_sent);
             response.Clear();
@@ -296,16 +265,10 @@
             response.SuppressContent = !sendBody;
         }
 
-        public static HttpRawResponse GetSnapshot(HttpResponse response) {
+        private static HttpRawResponse GetSnapshot(HttpResponse response) {
             var headers = new NameValueCollection();
-            const bool hasSubstBlocks = false;
             if (response.HeadersWritten)
                 throw new HttpException(SR.Cannot_get_snapshot_if_not_buffered);
-            // data
-            ArrayList buffers = OutputCacheUtility.GetContentBuffers(response);
-            // headers (after data as the data has side effects (like charset, see ASURT 113202))    
-            int statusCode = response.StatusCode;
-            string statusDescription = response.StatusDescription;
             foreach (string h in response.Headers.AllKeys) {
                 if
                     (h == "HttpWorkerRequest.HeaderServer" ||
@@ -320,22 +283,18 @@
                 headers.Add(h, response.Headers[h]);
             }
             return new HttpRawResponse {
-                StatusCode = statusCode,
-                StatusDescription = statusDescription,
+                StatusCode = response.StatusCode,
+                StatusDescription = response.StatusDescription,
                 Headers = headers,
-                Buffers = buffers,
-                HasSubstBlocks = hasSubstBlocks
-            };
+                Buffers = OutputCacheUtility.GetContentBuffers(response),
+             };
         }
 
-        public static HttpCachePolicySettings GetCurrentSettings(HttpResponse response) {
-            IEnumerable<KeyValuePair<HttpCacheValidateHandler, object>> validationCallbackInfo =
-                OutputCacheUtility.GetValidationCallbacks(response);
-
+        private static HttpCachePolicySettings GetCurrentSettings(HttpResponse response) {
             //update some headers fields within the response.cache object
             return new HttpCachePolicySettings {
                 Cacheability = response.Cache.GetCacheability(),
-                ValidationCallbackInfo = validationCallbackInfo,
+                ValidationCallbackInfo = OutputCacheUtility.GetValidationCallbacks(response),
                 VaryByContentEncodings = response.Cache.VaryByContentEncodings.GetContentEncodings(),
                 VaryByHeaders = response.Cache.VaryByHeaders.GetHeaders(),
                 VaryByParams = response.Cache.VaryByParams.GetParams(),
@@ -352,7 +311,7 @@
             };
         }
 
-        public static void ResetFromHttpCachePolicySettings(HttpCachePolicySettings settings,
+        private static void ResetFromHttpCachePolicySettings(HttpCachePolicySettings settings,
             DateTime utcTimestampRequest, HttpResponse response) {
             response.Cache.SetCacheability(settings.Cacheability);
             response.Cache.VaryByContentEncodings.SetContentEncodings(settings.VaryByContentEncodings);
@@ -384,7 +343,7 @@
             }
         }
 
-        public static void UpdateCachedHeaders(HttpResponse response) {
+        private static void UpdateCachedHeaders(HttpResponse response) {
             //To enable Out of Band OutputCache Module support, we will always refresh the UtcTimestampRequest.
             if (response.Cache.UtcTimestampCreated == DateTime.MinValue) {
                 response.Cache.UtcTimestampCreated = HttpContext.Current.Timestamp.ToUniversalTime();
@@ -599,7 +558,6 @@
          * the path and optionally, vary parameters, vary headers, custom strings,
          * and form posted data.
          */
-
         public static string CreateOutputCachedItemKey(HttpContext context, CachedVary cachedVary) {
             return CreateOutputCachedItemKey(context.Request.Path, context.Request.HttpMethod, context, cachedVary);
         }
@@ -609,7 +567,6 @@
          * Accept-Encoding header (see RFC 2616)
          * returns either i) an acceptable index in contentEncodings, ii) -1 if the identity is acceptable, or iii) -2 if nothing is acceptable
          */
-
         public static int GetAcceptableEncoding(string[] contentEncodings, int startIndex, string acceptEncoding) {
             // The format of Accept-Encoding is ( 1#( codings [ ";" "q" "=" qvalue ] ) | "*" )
             if (string.IsNullOrEmpty(acceptEncoding)) {
@@ -620,7 +577,6 @@
             int tokenEnd = acceptEncoding.IndexOf(',');
             if (tokenEnd == -1) {
                 string acceptEncodingWithoutWeight = acceptEncoding;
-                // WOS 1984913: is there a weight?
                 tokenEnd = acceptEncoding.IndexOf(';');
                 if (tokenEnd > -1) {
                     // remove weight
@@ -636,7 +592,6 @@
                         return (identityIsAcceptable) ? -1 : -2;
                     }
                 }
-                // WOS 1985353: is this the special "*" symbol?
                 if (acceptEncodingWithoutWeight == Asterisk) {
                     // just return the index of the first entry in the list, since it is acceptable
                     return 0;
@@ -773,5 +728,425 @@
             return !(Math.Abs(weight) < tolerance) &&
                    (!(weight <= 0) || Math.Abs(GetAcceptableEncodingHelper(Asterisk, acceptEncoding)) > 0);
         }
+
+        public static bool IsResponseCacheable(HttpContext context) {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+            HttpCachePolicy cache = response.Cache;
+            if (!cache.IsModified()) {
+                return false;
+            }
+            if (response.StatusCode != 200) {
+                return false;
+            }
+            if (request.HttpMethod != HttpMethods.GET && request.HttpMethod != HttpMethods.POST) {
+                return false;
+            }
+            if (response.HeadersWritten) {
+                return false;
+            }
+            var cacheability = cache.GetCacheability();
+            if (cacheability != HttpCacheability.Public &&
+                cacheability != HttpCacheability.ServerAndPrivate &&
+                cacheability != HttpCacheability.ServerAndNoCache) {
+                return false;
+            }
+            if (cache.GetNoServerCaching()) {
+                return false;
+            }
+
+            if (OutputCacheHelper.ContainsNonShareableCookies(response)) {
+                return false;
+            }
+            bool hasExpirationPolicy = !cache.HasSlidingExpiration() &&
+                                       (cache.GetExpires() != DateTime.MinValue || cache.GetMaxAge() != TimeSpan.Zero);
+            bool hasValidationPolicy = cache.GetLastModifiedFromFileDependencies() ||
+                                       cache.GetETagFromFileDependencies() ||
+                                       OutputCacheUtility.GetValidationCallbacks(response).Any() ||
+                                       (cache.IsValidUntilExpires() && !cache.HasSlidingExpiration());
+            if (!hasExpirationPolicy && !hasValidationPolicy) {
+                return false;
+            }
+            if (cache.VaryByHeaders[Asterisk]) {
+                return false;
+            }
+            bool acceptParams = (cache.VaryByParams.IgnoreParams ||
+                                 (Equals(cache.VaryByParams.GetParams(), new[] {Asterisk})) ||
+                                 (cache.VaryByParams.GetParams() != null && cache.VaryByParams.GetParams().Any()));
+            if (!acceptParams && (request.HttpMethod == HttpMethods.POST || (request.QueryString.Count > 0))) {
+                return false;
+            }
+            return cache.VaryByContentEncodings.GetContentEncodings() == null ||
+                   OutputCacheHelper.IsCacheableEncoding(context.Response.ContentEncoding,
+                       cache.VaryByContentEncodings);
+        }
+
+       
+
+        public static async Task CacheResponseAsync(HttpContext context) {
+            HttpResponse response = context.Response;
+            CachedVary cachedVary = null; ;
+            string keyRawResponse;
+            /* Add response to cache.*/
+            OutputCacheHelper.UpdateCachedHeaders(response);
+            //look at response cachepolicy and decide if to cache it
+            HttpCachePolicySettings settings = OutputCacheHelper.GetCurrentSettings(response);
+            string[] varyByHeaders = settings.VaryByHeaders;
+            string[] varyByParams = settings.IgnoreParams ? null : settings.VaryByParams;
+            /* Create the key if it was not created in OnEnter */
+            string key = OutputCacheHelper.CreateOutputCachedItemKey(context, null);
+
+            if (settings.VaryByContentEncodings == null && varyByHeaders == null && varyByParams == null &&
+                settings.VaryByCustom == null) {
+                // This is not a varyBy item.
+                keyRawResponse = key;
+            }
+            else {
+                /*
+                 * There is a vary in the cache policy. We handle this
+                 * by adding another item to the cache which contains
+                 * a list of the vary headers. A request for the item
+                 * without the vary headers in the key will return this 
+                 * item. From the headers another key can be constructed
+                 * to lookup the item with the raw response.
+                 */
+                if (varyByHeaders != null) {
+                    for (int i = 0, n = varyByHeaders.Length; i < n; i++) {
+                        varyByHeaders[i] = "HTTP_" + CultureInfo.InvariantCulture.TextInfo.ToUpper(
+                            varyByHeaders[i].Replace('-', '_'));
+                    }
+                }
+                bool varyByAllParams = false;
+                if (varyByParams != null) {
+                    varyByAllParams = (varyByParams.Length == 1 && varyByParams[0] == Asterisk);
+                    if (varyByAllParams) {
+                        varyByParams = null;
+                    }
+                    else {
+                        for (int i = 0, n = varyByParams.Length; i < n; i++) {
+                            varyByParams[i] = CultureInfo.InvariantCulture.TextInfo.ToLower(varyByParams[i]);
+                        }
+                    }
+                }
+                cachedVary = new CachedVary {
+                    ContentEncodings = settings.VaryByContentEncodings,
+                    Headers = varyByHeaders,
+                    Params = varyByParams,
+                    VaryByAllParams = varyByAllParams,
+                    VaryByCustom = settings.VaryByCustom
+                };
+                keyRawResponse = OutputCacheHelper.CreateOutputCachedItemKey(context, cachedVary);
+                if (keyRawResponse == null) {
+                    return;
+                }
+                // it is possible that the user code calculating custom vary-by
+                // string would Flush making the response non-cacheable. Check fo it here.
+                if (response.HeadersWritten) {
+                    return;
+                }
+            }
+            DateTime utcExpires = Cache.NoAbsoluteExpiration;
+            TimeSpan slidingDelta = Cache.NoSlidingExpiration;
+            if (settings.SlidingExpiration) {
+                slidingDelta = settings.SlidingDelta;
+            }
+            else if (settings.MaxAge != TimeSpan.MinValue) {
+                DateTime utcTimestamp = (settings.UtcTimestampCreated != DateTime.MinValue)
+                    ? settings.UtcTimestampCreated
+                    : context.Timestamp;
+                utcExpires = utcTimestamp + settings.MaxAge;
+            }
+            else if (settings.UtcExpires != DateTime.MinValue) {
+                utcExpires = settings.UtcExpires;
+            }
+            // Check and ensure that item hasn't expired:
+            await InsertResponseAsync(key, utcExpires, context, cachedVary, settings, keyRawResponse, slidingDelta);
+        }
+
+        private static async Task InsertResponseAsync(string key, DateTime utcExpires, HttpContext context, CachedVary cachedVary, HttpCachePolicySettings settings, string keyRawResponse, TimeSpan slidingDelta) {
+            if (utcExpires > DateTime.Now) {
+                // Create the response object to be sent on cache hits.
+                HttpRawResponse httpRawResponse = OutputCacheHelper.GetSnapshot(context.Response);
+                string kernelCacheUrl = OutputCacheUtility.SetupKernelCaching(null, context.Response);
+                Guid cachedVaryId = cachedVary?.CachedVaryId ?? Guid.Empty;
+                var cachedRawResponse = new CachedRawResponse {
+                    RawResponse = httpRawResponse,
+                    CachePolicy = settings,
+                    KernelCacheUrl = kernelCacheUrl,
+                    CachedVaryId = cachedVaryId
+                };
+                using (CacheDependency dep = OutputCacheUtility.CreateCacheDependency(context.Response)) {
+                    await InsertResponseAsync(key, cachedVary,
+                        keyRawResponse, cachedRawResponse,
+                        dep,
+                        utcExpires, slidingDelta);
+                }
+            }
+        }
+
+        public static void UpdateCachedResponse(HttpContext context, HttpCachePolicySettings settings, HttpRawResponse rawResponse) {
+            /* Try to satisfy a conditional request. The cached response
+            * must satisfy all conditions that are present.
+            * We can only satisfy a conditional request if the response
+            * is buffered and has no substitution blocks.
+            * N.B. RFC 2616 says conditional requests only occur 
+            * with the GET method, but we try to satisfy other
+            * verbs (HEAD, POST) as well.*/      
+            if (CheckIfModifiedSince(context, settings) && CheckIfNoneMatch(context, settings)) {
+                /*
+                 * Send 304 Not Modified
+                 */
+                if (context.Response.HeadersWritten) {
+                    context.Response.ClearHeaders();
+                }
+                context.Response.Clear();
+                context.Response.StatusCode = 304;
+            }
+            else {
+                // Check and see if the cachedRawResponse is from the disk
+                // If so, we must clone the HttpRawResponse before sending it
+                // UseSnapshot calls ClearAll
+                OutputCacheHelper.UseSnapshot(rawResponse, context.Request.HttpMethod != "HEAD", context.Response);
+            }
+            OutputCacheHelper.ResetFromHttpCachePolicySettings(settings, context.Timestamp, context.Response);
+        }
+
+        private static bool CheckIfNoneMatch(HttpContext context, HttpCachePolicySettings settings) {
+            /* Check "If-None-Match" header */
+            string etagHeader = context.Request.Headers[HttpRequestHeaders.IfNoneMatch];
+            if (etagHeader != null) {
+                string[] etags = etagHeader.Split(s_fieldSeparators);
+                for (int i = 0, n = etags.Length; i < n; i++) {
+                    if (i == 0 && etags[i].Equals(Asterisk)) {
+                        return true;
+                    }
+                    if (etags[i].Equals(settings.ETag)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        private static bool CheckIfModifiedSince(HttpContext context, HttpCachePolicySettings settings) {
+            string ifModifiedSinceHeader = context.Request.Headers[HttpRequestHeaders.IfModifiedSince];
+            if (ifModifiedSinceHeader != null && settings.UtcLastModified != DateTime.MinValue &&
+                    settings.UtcLastModified <= HttpDate.UtcParse(ifModifiedSinceHeader) &&
+                    HttpDate.UtcParse(ifModifiedSinceHeader) <= context.Timestamp.ToUniversalTime()) {
+                return true;
+            }
+            return false;
+        }
+
+        public static bool IsContentEncodingAcceptable(CachedVary cachedVary, HttpRequest request,
+            HttpRawResponse rawResponse) {
+            // ensure Content-Encoding is acceptable
+            if (cachedVary?.ContentEncodings != null) {
+                return true;
+            }
+            string acceptEncoding = request.Headers[HttpRequestHeaders.AcceptEncoding];
+            NameValueCollection headers = rawResponse.Headers;
+            if (headers == null) {
+                return OutputCacheHelper.IsAcceptableEncoding(null, acceptEncoding);
+            }
+            string contentEncoding = headers.Cast<string>().FirstOrDefault(h => h == HttpRequestHeaders.ContentEncoding);
+            return OutputCacheHelper.IsAcceptableEncoding(contentEncoding, acceptEncoding);
+        }
+
+        public static bool CheckHeaders(HttpCachePolicySettings settings, HttpContext context) {
+            HttpRequest request = context.Request; 
+            if (!settings.HasValidationPolicy()) {
+                if (request.Headers[HttpRequestHeaders.CacheControl] != null) {
+                    string[] cacheDirectives = request.Headers[HttpRequestHeaders.CacheControl].Split(s_fieldSeparators);
+                    foreach (string directive in cacheDirectives) {
+                        if (checkMaxAge(directive, settings, context))
+                            return true;
+                    }
+                }
+                string pragma = request.Headers[HttpRequestHeaders.Pragma];
+                if (pragma == null) {
+                    return false;
+                }
+                if (!pragma.Split(s_fieldSeparators).Any(t => t == null || t == CacheDirectives.NoCache)) {
+                    return false;
+                }
+                return true;
+            }
+            return false;
+        }
+
+        public static async Task<bool> CheckValidityAsync(string key, HttpCachePolicySettings settings, HttpContext context) {
+            if (settings.ValidationCallbackInfo == null || !settings.ValidationCallbackInfo.Any()) {
+                return false;
+            }
+            /*
+            * Check if the item is still valid.
+            */
+            var validationStatus = HttpValidationStatus.Valid;
+            HttpValidationStatus validationStatusFinal = validationStatus;
+            foreach (KeyValuePair<HttpCacheValidateHandler, object> vci in settings.ValidationCallbackInfo) {
+                vci.Key(context, vci.Value, ref validationStatus);
+                switch (validationStatus) {
+                    case HttpValidationStatus.Invalid:
+                        await RemoveAsync(key, context);
+                        return true;
+                    case HttpValidationStatus.IgnoreThisRequest:
+                        validationStatusFinal = HttpValidationStatus.IgnoreThisRequest;
+                        break;
+                    case HttpValidationStatus.Valid:
+                        break;
+                    default:
+                        validationStatus = validationStatusFinal;
+                        break;
+                }
+            }
+            if (validationStatusFinal == HttpValidationStatus.IgnoreThisRequest) {
+                return true;
+            }
+            return false;
+        }
+
+        private static bool checkMaxAge(string directive, HttpCachePolicySettings settings, HttpContext context) {
+            if (directive == CacheDirectives.NoCache || directive == CacheDirectives.NoStore) {
+                return true;
+            }
+            if (directive.StartsWith(CacheDirectives.MaxAge)) {
+                int maxage;
+                try {
+                    int.TryParse(directive.Substring(8), out maxage);
+                }
+                catch {
+                    maxage = -1;
+                }
+
+                if (maxage < 0) {
+                    return false;
+                }
+                int age =
+                    (int)
+                        ((context.Timestamp.Ticks - settings.UtcTimestampCreated.Ticks) /
+                         TimeSpan.TicksPerSecond);
+                if (age < maxage) {
+                    return false;
+                }
+                return true;
+            }
+            if (!directive.StartsWith(CacheDirectives.MinFresh)) {
+                return false;
+            }
+            int minfresh = -1;
+            Int32.TryParse((directive.Substring(10)), out minfresh);
+
+            if (minfresh < 0 || settings.UtcExpires == DateTime.MinValue || settings.SlidingExpiration) {
+                return false;
+            }
+            int fresh =
+                (int)((settings.UtcExpires.Ticks - context.Timestamp.Ticks) / TimeSpan.TicksPerSecond);
+            if (fresh >= minfresh) {
+                return false;
+            }
+            return true;
+        }
+
+        public static bool IsHttpMethodSupported(HttpRequest request) {
+            // Check if the request can be resolved for this method.       
+            switch (request.HttpMethod.ToUpper()) {
+                case HttpMethods.HEAD:
+                case HttpMethods.GET:
+                case HttpMethods.POST:
+                    break;
+                default:
+                    return false;
+            }
+            return true;
+        }
+
+        public static async Task<object> GetAsCacheVaryAsync(CachedVary cachedVary, HttpContext context) {
+            object item = null;
+            // If we have one, create a new cache key for it (this is a must)
+            /*
+                 * This cached output has a Vary policy. Create a new key based 
+                 * on the vary headers in cachedRawResponse and try again.
+                 *
+                 * Skip this step if it's a VaryByNone vary policy.
+                 */
+            string key = OutputCacheHelper.CreateOutputCachedItemKey(context, cachedVary);
+            if (key == null) {
+                return null;
+            }
+            if (cachedVary.ContentEncodings == null) {
+                // With the new key, look up the in-memory key.
+                // At this point, we've exhausted the lookups in memory for this item.
+                item = await GetAsync(key);
+            }
+            else {
+                bool identityIsAcceptable = true;
+                string acceptEncoding = context.Request.Headers[HttpRequestHeaders.AcceptEncoding];
+                if (acceptEncoding != null) {
+                    string[] contentEncodings = cachedVary.ContentEncodings;
+                    int startIndex = 0;
+                    bool done = false;
+                    while (!done) {
+                        done = true;
+                        int index = OutputCacheHelper.GetAcceptableEncoding(contentEncodings, startIndex, acceptEncoding);
+                        if (index > -1) {
+                            identityIsAcceptable = false;
+                            // the client Accept-Encoding header contains an encoding that's in the VaryByContentEncoding list
+                            item = await GetAsync(key + contentEncodings[index]);
+                            if (item != null) {
+                                continue;
+                            }
+                            startIndex = index + 1;
+                            if (startIndex < contentEncodings.Length) {
+                                done = false;
+                            }
+                        }
+                        else if (index == -2) {
+                            // the identity has a weight of 0 and is not acceptable
+                            identityIsAcceptable = false;
+                        }
+                    }
+                }
+                // the identity should not be used if the client Accept-Encoding contains an entry in the VaryByContentEncoding list or "identity" is not acceptable
+                if (item == null && identityIsAcceptable) {
+                    item = await GetAsync(key);
+                }
+            }
+            if (item == null) return null;
+
+            if (((CachedRawResponse)item).CachedVaryId == cachedVary.CachedVaryId) {
+                return item;
+            }
+            else {
+                // explicitly remove entry because _cachedVaryId does not match
+                await RemoveAsync(key, context);
+                return null;
+            }
+        }
+
+        public static bool CheckCachedVary(HttpRequest request, CachedVary cachedVary, HttpCachePolicySettings settings) {
+            // From this point on, we have an entry to work with.
+            if (cachedVary == null && !settings.IgnoreParams) {
+                // This cached output has no vary policy, so make sure it doesn't have a query string or form post.
+                if (request.HttpMethod == HttpMethods.POST) {
+                    return true;
+                }
+                if (request.QueryString.Count > 0) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public static bool IsRangeRequest(HttpRequest request) {
+            // Don't record this if as a cache miss. The response for a range request is not cached, and so
+            // we don't want to pollute the cache hit/miss ratio.
+            string rangeHeader = request.Headers[HttpRequestHeaders.Range];
+            if (rangeHeader.StartsWith("bytes", StringComparison.OrdinalIgnoreCase)) {
+                return true;
+            }
+            return false;
+        }
+
     }
 }

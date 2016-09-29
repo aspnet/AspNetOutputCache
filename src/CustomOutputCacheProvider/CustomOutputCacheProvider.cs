@@ -5,7 +5,7 @@ using System.Web.Caching;
 
 namespace Microsoft.AspNet.OutputCache.CustomOutputCacheProvider {
 
-    internal class CustomOutputCacheItem {
+     class CustomOutputCacheItem {
         public object Obj;
         public DateTime UtcExpiry;
         public CustomOutputCacheItem(object entry, DateTime utcExpiryIn) {

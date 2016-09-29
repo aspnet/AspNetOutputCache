@@ -27,5 +27,8 @@
                    && StringUtil.StringArrayEquals(Headers, cv.Headers)
                    && StringUtil.StringArrayEquals(Params, cv.Params);
         }
+        public override int GetHashCode() {
+            return base.GetHashCode();
+        }
     }
 }

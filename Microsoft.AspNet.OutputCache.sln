@@ -1,11 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.25123.0
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.AspNet.OutputCache", "src\OutputCacheModuleAsync\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.csproj", "{3B446E33-7B1C-4A32-AEB8-92DC6CE94F77}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.AspNet.OutputCache.OutputCacheModuleAsync", "src\OutputCacheModuleAsync\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.csproj", "{3B446E33-7B1C-4A32-AEB8-92DC6CE94F77}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CustomOutputCacheProvider", "src\CustomOutputCacheProvider\Microsoft.AspNet.OutputCache.CustomOutputCacheProvider.csproj", "{A8F3E399-BCAF-4F3E-BC16-5CA98A779916}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.AspNet.OutputCache.CustomOutputCacheProvider", "src\CustomOutputCacheProvider\Microsoft.AspNet.OutputCache.CustomOutputCacheProvider.csproj", "{A8F3E399-BCAF-4F3E-BC16-5CA98A779916}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "testnewcache", "..\..\testoutputcache\testnewcache\testnewcache.csproj", "{1D14BBD9-C8D6-4A08-949C-2395005E22A4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ComparewithOldCache", "ComparewithOldCache\ComparewithOldCache.csproj", "{DA686514-993E-4FA9-8B1D-9A5DCCF9CD4E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +25,14 @@ Global
 		{A8F3E399-BCAF-4F3E-BC16-5CA98A779916}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A8F3E399-BCAF-4F3E-BC16-5CA98A779916}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A8F3E399-BCAF-4F3E-BC16-5CA98A779916}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1D14BBD9-C8D6-4A08-949C-2395005E22A4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D14BBD9-C8D6-4A08-949C-2395005E22A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D14BBD9-C8D6-4A08-949C-2395005E22A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D14BBD9-C8D6-4A08-949C-2395005E22A4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DA686514-993E-4FA9-8B1D-9A5DCCF9CD4E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA686514-993E-4FA9-8B1D-9A5DCCF9CD4E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA686514-993E-4FA9-8B1D-9A5DCCF9CD4E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA686514-993E-4FA9-8B1D-9A5DCCF9CD4E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

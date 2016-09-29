@@ -2,13 +2,13 @@
     using System;
     using System.Web.Caching;
 
-    class DependencyCacheEntry {
+    sealed class DependencyCacheEntry {
         public string RawResponseKey;
         public string KernelCacheUrl;
         public string Name;
     }
 
-    class DependencyCacheEntryWrapper {
+    sealed class DependencyCacheEntryWrapper {
         public DependencyCacheEntry DependencyCacheEntry;
         public CacheDependency Dependencies;
         public TimeSpan DependencyCacheTimeSpan;

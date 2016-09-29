@@ -3,7 +3,8 @@
     using System.Runtime.Caching;
     using System.Threading.Tasks;
     using System.Web.Caching;
-    using Microsoft.AspNet.OutputCache.Resource;
+    using Resource;
+
     class InMemoryOutputCacheProvider : OutputCacheProviderAsync {
         private readonly MemoryCache _cache = new MemoryCache(SR.Microsoft_AspNet_OutputCache_Default_InMemory_Provider);
 

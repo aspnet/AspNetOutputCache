@@ -1,7 +1,8 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-    <PropertyGroup>
-        <RepositoryRootEx Condition="'$(RepositoryRootEx)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory),Microsoft.Aspnet.OutputCache.sln))\</RepositoryRootEx>
-    </PropertyGroup>
+
+ <PropertyGroup>
+    <RepositoryRootEx Condition="'$(RepositoryRootEx)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory),Microsoft.Aspnet.OutputCache.sln))\</RepositoryRootEx>
+  </PropertyGroup>
     
     <PropertyGroup>
         <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
@@ -9,11 +10,6 @@
         <ObjPath>$(RepositoryRootEx)obj\</ObjPath>
         <OutputPath>$(BinPath)$(Configuration)\</OutputPath>
         <IntermediateOutputPath>$(ObjPath)$(Configuration)\$(MSBuildProjectName)\</IntermediateOutputPath>
-    </PropertyGroup>
-
-    <PropertyGroup>
-        <TestRoot>$(RepositoryRoot)\test\Microsoft.AspNet.OutputCache.CustomOutputCacheProvider.Test</TestRoot>
-        <BuildingTestProject Condition="$(MSBuildProjectDirectory.ToLower().Contains($(TestRoot.ToLower())))">true</BuildingTestProject>
     </PropertyGroup>
 
 

@@ -37,7 +37,7 @@
   </Target>
 
   <ItemGroup>
-    <BinScopeTargetFiles Include="$(OutputPath)Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.dll" />
+    <BinScopeTargetFiles        Include="$(OutputPath)Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.dll"/>
   </ItemGroup>
   
 <!-- CodeSign definitions -->
@@ -61,11 +61,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <CodeSign Include="$(OutputPath)Microsoft.AspNet.OutputCache.CustomOutputCacheProvider.dll">
-            <AuthCodeCert>10006</AuthCodeCert>
-            <StrongNameCert>72</StrongNameCert>
-        </CodeSign>
-              <CodeSign Include="$(OutputPath)Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.dll">
+        <CodeSign Include="$(OutputPath)Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.dll">
             <AuthCodeCert>10006</AuthCodeCert>
             <StrongNameCert>72</StrongNameCert>
         </CodeSign>

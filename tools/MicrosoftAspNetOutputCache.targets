@@ -22,7 +22,7 @@
             <NuSpecProperties>
                 NuGetPackageVersion=$(NuGetPackageVersion);
                 NuGetPackageId=$(NuGetPackageId);
-            		OutputCacheModuleAsyncNuGetPackageVersion=$(OutputCacheModuleAsyncNuGetPackageVersion);
+                OutputCacheModuleAsyncNuGetPackageVersion=$(OutputCacheModuleAsyncNuGetPackageVersion);
             </NuSpecProperties>
         </PropertyGroup>
     </Target>

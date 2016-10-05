@@ -35,10 +35,6 @@
             return _cache.Add(key, entry, expiration) ? entry : null;
         }
 
-        public void Add(string depKey, DependencyCacheEntryWrapper dcew, DateTimeOffset dateTimeOffsetValue) {
-            _cache.Add(depKey, dcew, dateTimeOffsetValue);
-        }
-
         public override void Set(string key, object entry, DateTime utcExpiry) {
             DateTimeOffset expiration = (utcExpiry == Cache.NoAbsoluteExpiration) ? ObjectCache.InfiniteAbsoluteExpiration : utcExpiry;
             _cache.Set(key, entry, expiration);

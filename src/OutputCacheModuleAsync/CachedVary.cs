@@ -1,7 +1,7 @@
 ﻿namespace Microsoft.AspNet.OutputCache {
     using System;
 
-    class CachedVary {
+    sealed class CachedVary {
         public string[] ContentEncodings { get; set; }
         public string[] Headers { get; set; }
         public string[] Params { get; set; }
@@ -14,7 +14,7 @@
         }
 
         public override bool Equals(object obj) {
-            if (Object.ReferenceEquals(obj,this)) {
+            if (Object.ReferenceEquals(obj, this)) {
                 return true;
             }
             var cv = obj as CachedVary;
@@ -27,6 +27,7 @@
                    && StringUtil.StringArrayEquals(Headers, cv.Headers)
                    && StringUtil.StringArrayEquals(Params, cv.Params);
         }
+
         public override int GetHashCode() {
             return base.GetHashCode();
         }

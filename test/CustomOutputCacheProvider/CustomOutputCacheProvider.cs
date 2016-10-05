@@ -1,11 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Web.Caching;
+﻿namespace Microsoft.AspNet.OutputCache.CustomOutputCacheProvider {
+    using System;
+    using System.Collections.Generic;
+    using System.Threading.Tasks;
+    using System.Web.Caching;
 
-namespace Microsoft.AspNet.OutputCache.CustomOutputCacheProvider {
-
-     class CustomOutputCacheItem {
+    class CustomOutputCacheItem {
         public object Obj;
         public DateTime UtcExpiry;
         public CustomOutputCacheItem(object entry, DateTime utcExpiryIn) {
@@ -48,7 +47,6 @@ namespace Microsoft.AspNet.OutputCache.CustomOutputCacheProvider {
             await RemoveAsync(key);
             return null;
         }
-
 
         /// <summary>
         /// Override method for the Async OutputCache Provider

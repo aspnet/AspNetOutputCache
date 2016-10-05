@@ -1,12 +1,8 @@
 ﻿namespace Microsoft.AspNet.OutputCache {
-    using System.Collections.Generic;
     using System;
-    using System.Linq;
     using System.Threading.Tasks;
-    using System.Globalization;
     using System.Web;
     using System.Web.Caching;
-    using System.Collections.Specialized;
     using System.Web.Configuration;
     using System.Configuration;
 
@@ -56,7 +52,7 @@
             string key = OutputCacheHelper.CreateOutputCachedItemKey(context, null);
 
             // Lookup the cache vary using the key
-            object item = await OutputCacheHelper.GetItemAsync(key);
+            object item = await OutputCacheHelper.GetAsync(key);
             if (item == null) {
                 return;
             }

@@ -14,6 +14,7 @@
     using System.Runtime.Caching;
 
     static class OutputCacheHelper {
+        #region private fileds and methods
         private static readonly char[] s_fieldSeparators = { ',', ' ' };
         private const int MaxPostKeyLength = 15000;
         private const string NullVarybyValue = "+n+";
@@ -26,9 +27,7 @@
         private static MemoryCache _memoryCache;
         private static MemoryCache MemoryCache => _memoryCache ?? (_memoryCache = new MemoryCache("MemoryCache"));
         private static InMemoryOutputCacheProvider _inMemoryOutputCacheProvider;
-        private static InMemoryOutputCacheProvider InMemoryOutputCacheProvider => _inMemoryOutputCacheProvider ??
-                                                                           (_inMemoryOutputCacheProvider =
-                                                                               new InMemoryOutputCacheProvider());
+        private static InMemoryOutputCacheProvider InMemoryOutputCacheProvider => _inMemoryOutputCacheProvider ?? (_inMemoryOutputCacheProvider = new InMemoryOutputCacheProvider());
 
         private static async Task RemoveFromProvider(string key, string providerName) {
             OutputCacheProviderAsync provider;
@@ -56,10 +55,8 @@
             // if the context did not provide a provider, then use the default internal output cache provider for everything
             return provider ?? InMemoryOutputCacheProvider;
         }
-
        
-        private static bool HasDependencyChanged(string depKey, string[] fileDeps, string kernelKey, string oceKey,
-            string providerName) {
+        private static bool HasDependencyChanged(string depKey, string[] fileDeps, string kernelKey, string oceKey, string providerName) {
             if (depKey == null) {
                 return false;
             }
@@ -120,25 +117,6 @@
                 KernelCacheUrl = oce.KernelCacheUrl,
                 CachedVaryId = oce.CachedVaryId
             };
-        }
-
-        public static async Task<object> GetItemAsync(string key) {
-            return await GetAsync(key);
-        }
-
-        private static async Task<object> GetAsync(string key) {
-            OutputCacheProviderAsync provider = GetProvider(HttpContext.Current);
-            object result = await provider.GetAsync(key);
-            var oce = result as OutputCacheEntry;
-            if (oce == null) {
-                return result;
-            }
-            if (HasDependencyChanged(oce.DependenciesKey, oce.Dependencies, oce.KernelCacheUrl, key, provider.Name)) {
-                await RemoveFromProvider(key, provider.Name);
-                return null;
-            }
-            result = Convert(oce);
-            return result;
         }
 
         private static async Task RemoveAsync(string key, HttpContext context) {
@@ -311,8 +289,7 @@
             };
         }
 
-        private static void ResetFromHttpCachePolicySettings(HttpCachePolicySettings settings,
-            DateTime utcTimestampRequest, HttpResponse response) {
+        private static void ResetFromHttpCachePolicySettings(HttpCachePolicySettings settings, DateTime utcTimestampRequest, HttpResponse response) {
             response.Cache.SetCacheability(settings.Cacheability);
             response.Cache.VaryByContentEncodings.SetContentEncodings(settings.VaryByContentEncodings);
             response.Cache.VaryByHeaders.SetHeaders(settings.VaryByHeaders);
@@ -425,11 +402,7 @@
                 return utcFileLastModifiedMax;
         }
 
-        private static string CreateOutputCachedItemKey(
-            string path,
-            string verb,
-            HttpContext context,
-            CachedVary cachedVary) {
+        private static string CreateOutputCachedItemKey(string path, string verb, HttpContext context, CachedVary cachedVary) {
             StringBuilder sb = verb == HttpMethods.POST
                 ? new StringBuilder(OutputcacheKeyprefixPost, path.Length + OutputcacheKeyprefixPost.Length)
                 : new StringBuilder(OutputcacheKeyprefixGet, path.Length + OutputcacheKeyprefixGet.Length);
@@ -553,82 +526,6 @@
             return sb.ToString();
         }
 
-        /*
-         * Return a key to lookup a cached response. The key contains 
-         * the path and optionally, vary parameters, vary headers, custom strings,
-         * and form posted data.
-         */
-        public static string CreateOutputCachedItemKey(HttpContext context, CachedVary cachedVary) {
-            return CreateOutputCachedItemKey(context.Request.Path, context.Request.HttpMethod, context, cachedVary);
-        }
-
-        /*
-         * GetAcceptableEncoding finds an acceptable coding for the given
-         * Accept-Encoding header (see RFC 2616)
-         * returns either i) an acceptable index in contentEncodings, ii) -1 if the identity is acceptable, or iii) -2 if nothing is acceptable
-         */
-        public static int GetAcceptableEncoding(string[] contentEncodings, int startIndex, string acceptEncoding) {
-            // The format of Accept-Encoding is ( 1#( codings [ ";" "q" "=" qvalue ] ) | "*" )
-            if (string.IsNullOrEmpty(acceptEncoding)) {
-                return -1; // use "identity"
-            }
-
-            // is there only one token?
-            int tokenEnd = acceptEncoding.IndexOf(',');
-            if (tokenEnd == -1) {
-                string acceptEncodingWithoutWeight = acceptEncoding;
-                tokenEnd = acceptEncoding.IndexOf(';');
-                if (tokenEnd > -1) {
-                    // remove weight
-                    int space = acceptEncoding.IndexOf(' ');
-                    if (space > -1 && space < tokenEnd) {
-                        tokenEnd = space;
-                    }
-                    acceptEncodingWithoutWeight = acceptEncoding.Substring(0, tokenEnd);
-                    if (Math.Abs(ParseWeight(acceptEncoding, tokenEnd)) < 0) {
-                        //weight is 0, use "identity" only if it is acceptable
-                        bool identityIsAcceptable = acceptEncodingWithoutWeight != Identity &&
-                                                    acceptEncodingWithoutWeight != Asterisk;
-                        return (identityIsAcceptable) ? -1 : -2;
-                    }
-                }
-                if (acceptEncodingWithoutWeight == Asterisk) {
-                    // just return the index of the first entry in the list, since it is acceptable
-                    return 0;
-                }
-                for (int i = startIndex; i < contentEncodings.Length; i++) {
-                    if (string.Equals(contentEncodings[i], acceptEncodingWithoutWeight,
-                        StringComparison.OrdinalIgnoreCase)) {
-                        return i; // found
-                    }
-                }
-                return -1; // not found, use "identity"
-            }
-            // there are multiple tokens
-            int bestCodingIndex = -1;
-            double bestCodingWeight = 0;
-            for (int i = startIndex; i < contentEncodings.Length; i++) {
-                string coding = contentEncodings[i];
-                // get weight of current coding
-                double weight = GetAcceptableEncodingHelper(coding, acceptEncoding);
-                // if it is 1, use it
-                if (Math.Abs(weight - 1) < Tolerance) {
-                    return i;
-                }
-                // if it is the best so far, remember it
-                if (!(weight > bestCodingWeight)) {
-                    continue;
-                }
-                bestCodingIndex = i;
-                bestCodingWeight = weight;
-            }
-            // WOS 1985352: use "identity" only if it is acceptable
-            if (bestCodingIndex == -1 && !IsIdentityAcceptable(acceptEncoding)) {
-                bestCodingIndex = -2;
-            }
-            return bestCodingIndex; // coding index with highest weight, possibly -1 or -2
-        }
-
         private static double Tolerance { get; set; }
 
         // Get the weight of the specified coding from the Accept-Encoding header.
@@ -714,155 +611,6 @@
             return result;
         }
 
-        public static bool IsAcceptableEncoding(string contentEncoding, string acceptEncoding) {
-            if (string.IsNullOrEmpty(contentEncoding)) {
-                // if Content-Encoding is not set treat it as the identity
-                contentEncoding = Identity;
-            }
-            if (string.IsNullOrEmpty(acceptEncoding)) {
-                // only the identity is acceptable if Accept-Encoding is not set
-                return (contentEncoding == Identity);
-            }
-            double weight = GetAcceptableEncodingHelper(contentEncoding, acceptEncoding);
-            const double tolerance = 0;
-            return !(Math.Abs(weight) < tolerance) &&
-                   (!(weight <= 0) || Math.Abs(GetAcceptableEncodingHelper(Asterisk, acceptEncoding)) > 0);
-        }
-
-        public static bool IsResponseCacheable(HttpContext context) {
-            HttpRequest request = context.Request;
-            HttpResponse response = context.Response;
-            HttpCachePolicy cache = response.Cache;
-            if (!cache.IsModified()) {
-                return false;
-            }
-            if (response.StatusCode != 200) {
-                return false;
-            }
-            if (request.HttpMethod != HttpMethods.GET && request.HttpMethod != HttpMethods.POST) {
-                return false;
-            }
-            if (response.HeadersWritten) {
-                return false;
-            }
-            var cacheability = cache.GetCacheability();
-            if (cacheability != HttpCacheability.Public &&
-                cacheability != HttpCacheability.ServerAndPrivate &&
-                cacheability != HttpCacheability.ServerAndNoCache) {
-                return false;
-            }
-            if (cache.GetNoServerCaching()) {
-                return false;
-            }
-
-            if (OutputCacheHelper.ContainsNonShareableCookies(response)) {
-                return false;
-            }
-            bool hasExpirationPolicy = !cache.HasSlidingExpiration() &&
-                                       (cache.GetExpires() != DateTime.MinValue || cache.GetMaxAge() != TimeSpan.Zero);
-            bool hasValidationPolicy = cache.GetLastModifiedFromFileDependencies() ||
-                                       cache.GetETagFromFileDependencies() ||
-                                       OutputCacheUtility.GetValidationCallbacks(response).Any() ||
-                                       (cache.IsValidUntilExpires() && !cache.HasSlidingExpiration());
-            if (!hasExpirationPolicy && !hasValidationPolicy) {
-                return false;
-            }
-            if (cache.VaryByHeaders[Asterisk]) {
-                return false;
-            }
-            bool acceptParams = (cache.VaryByParams.IgnoreParams ||
-                                 (Equals(cache.VaryByParams.GetParams(), new[] {Asterisk})) ||
-                                 (cache.VaryByParams.GetParams() != null && cache.VaryByParams.GetParams().Any()));
-            if (!acceptParams && (request.HttpMethod == HttpMethods.POST || (request.QueryString.Count > 0))) {
-                return false;
-            }
-            return cache.VaryByContentEncodings.GetContentEncodings() == null ||
-                   OutputCacheHelper.IsCacheableEncoding(context.Response.ContentEncoding,
-                       cache.VaryByContentEncodings);
-        }
-
-       
-
-        public static async Task CacheResponseAsync(HttpContext context) {
-            HttpResponse response = context.Response;
-            CachedVary cachedVary = null; ;
-            string keyRawResponse;
-            /* Add response to cache.*/
-            OutputCacheHelper.UpdateCachedHeaders(response);
-            //look at response cachepolicy and decide if to cache it
-            HttpCachePolicySettings settings = OutputCacheHelper.GetCurrentSettings(response);
-            string[] varyByHeaders = settings.VaryByHeaders;
-            string[] varyByParams = settings.IgnoreParams ? null : settings.VaryByParams;
-            /* Create the key if it was not created in OnEnter */
-            string key = OutputCacheHelper.CreateOutputCachedItemKey(context, null);
-
-            if (settings.VaryByContentEncodings == null && varyByHeaders == null && varyByParams == null &&
-                settings.VaryByCustom == null) {
-                // This is not a varyBy item.
-                keyRawResponse = key;
-            }
-            else {
-                /*
-                 * There is a vary in the cache policy. We handle this
-                 * by adding another item to the cache which contains
-                 * a list of the vary headers. A request for the item
-                 * without the vary headers in the key will return this 
-                 * item. From the headers another key can be constructed
-                 * to lookup the item with the raw response.
-                 */
-                if (varyByHeaders != null) {
-                    for (int i = 0, n = varyByHeaders.Length; i < n; i++) {
-                        varyByHeaders[i] = "HTTP_" + CultureInfo.InvariantCulture.TextInfo.ToUpper(
-                            varyByHeaders[i].Replace('-', '_'));
-                    }
-                }
-                bool varyByAllParams = false;
-                if (varyByParams != null) {
-                    varyByAllParams = (varyByParams.Length == 1 && varyByParams[0] == Asterisk);
-                    if (varyByAllParams) {
-                        varyByParams = null;
-                    }
-                    else {
-                        for (int i = 0, n = varyByParams.Length; i < n; i++) {
-                            varyByParams[i] = CultureInfo.InvariantCulture.TextInfo.ToLower(varyByParams[i]);
-                        }
-                    }
-                }
-                cachedVary = new CachedVary {
-                    ContentEncodings = settings.VaryByContentEncodings,
-                    Headers = varyByHeaders,
-                    Params = varyByParams,
-                    VaryByAllParams = varyByAllParams,
-                    VaryByCustom = settings.VaryByCustom
-                };
-                keyRawResponse = OutputCacheHelper.CreateOutputCachedItemKey(context, cachedVary);
-                if (keyRawResponse == null) {
-                    return;
-                }
-                // it is possible that the user code calculating custom vary-by
-                // string would Flush making the response non-cacheable. Check fo it here.
-                if (response.HeadersWritten) {
-                    return;
-                }
-            }
-            DateTime utcExpires = Cache.NoAbsoluteExpiration;
-            TimeSpan slidingDelta = Cache.NoSlidingExpiration;
-            if (settings.SlidingExpiration) {
-                slidingDelta = settings.SlidingDelta;
-            }
-            else if (settings.MaxAge != TimeSpan.MinValue) {
-                DateTime utcTimestamp = (settings.UtcTimestampCreated != DateTime.MinValue)
-                    ? settings.UtcTimestampCreated
-                    : context.Timestamp;
-                utcExpires = utcTimestamp + settings.MaxAge;
-            }
-            else if (settings.UtcExpires != DateTime.MinValue) {
-                utcExpires = settings.UtcExpires;
-            }
-            // Check and ensure that item hasn't expired:
-            await InsertResponseAsync(key, utcExpires, context, cachedVary, settings, keyRawResponse, slidingDelta);
-        }
-
         private static async Task InsertResponseAsync(string key, DateTime utcExpires, HttpContext context, CachedVary cachedVary, HttpCachePolicySettings settings, string keyRawResponse, TimeSpan slidingDelta) {
             if (utcExpires > DateTime.Now) {
                 // Create the response object to be sent on cache hits.
@@ -882,33 +630,6 @@
                         utcExpires, slidingDelta);
                 }
             }
-        }
-
-        public static void UpdateCachedResponse(HttpContext context, HttpCachePolicySettings settings, HttpRawResponse rawResponse) {
-            /* Try to satisfy a conditional request. The cached response
-            * must satisfy all conditions that are present.
-            * We can only satisfy a conditional request if the response
-            * is buffered and has no substitution blocks.
-            * N.B. RFC 2616 says conditional requests only occur 
-            * with the GET method, but we try to satisfy other
-            * verbs (HEAD, POST) as well.*/      
-            if (CheckIfModifiedSince(context, settings) && CheckIfNoneMatch(context, settings)) {
-                /*
-                 * Send 304 Not Modified
-                 */
-                if (context.Response.HeadersWritten) {
-                    context.Response.ClearHeaders();
-                }
-                context.Response.Clear();
-                context.Response.StatusCode = 304;
-            }
-            else {
-                // Check and see if the cachedRawResponse is from the disk
-                // If so, we must clone the HttpRawResponse before sending it
-                // UseSnapshot calls ClearAll
-                OutputCacheHelper.UseSnapshot(rawResponse, context.Request.HttpMethod != "HEAD", context.Response);
-            }
-            OutputCacheHelper.ResetFromHttpCachePolicySettings(settings, context.Timestamp, context.Response);
         }
 
         private static bool CheckIfNoneMatch(HttpContext context, HttpCachePolicySettings settings) {
@@ -938,8 +659,50 @@
             return false;
         }
 
-        public static bool IsContentEncodingAcceptable(CachedVary cachedVary, HttpRequest request,
-            HttpRawResponse rawResponse) {
+        private static bool checkMaxAge(string directive, HttpCachePolicySettings settings, HttpContext context) {
+            if (directive == CacheDirectives.NoCache || directive == CacheDirectives.NoStore) {
+                return true;
+            }
+            if (directive.StartsWith(CacheDirectives.MaxAge)) {
+                int maxage;
+                try {
+                    int.TryParse(directive.Substring(8), out maxage);
+                }
+                catch {
+                    maxage = -1;
+                }
+
+                if (maxage < 0) {
+                    return false;
+                }
+                int age =
+                    (int)
+                        ((context.Timestamp.Ticks - settings.UtcTimestampCreated.Ticks) /
+                         TimeSpan.TicksPerSecond);
+                if (age < maxage) {
+                    return false;
+                }
+                return true;
+            }
+            if (!directive.StartsWith(CacheDirectives.MinFresh)) {
+                return false;
+            }
+            int minfresh = -1;
+            Int32.TryParse((directive.Substring(10)), out minfresh);
+
+            if (minfresh < 0 || settings.UtcExpires == DateTime.MinValue || settings.SlidingExpiration) {
+                return false;
+            }
+            int fresh =
+                (int)((settings.UtcExpires.Ticks - context.Timestamp.Ticks) / TimeSpan.TicksPerSecond);
+            if (fresh >= minfresh) {
+                return false;
+            }
+            return true;
+        }
+        #endregion
+        #region public methods
+        public static bool IsContentEncodingAcceptable(CachedVary cachedVary, HttpRequest request, HttpRawResponse rawResponse) {
             // ensure Content-Encoding is acceptable
             if (cachedVary?.ContentEncodings != null) {
                 return true;
@@ -1004,48 +767,6 @@
                 return true;
             }
             return false;
-        }
-
-        private static bool checkMaxAge(string directive, HttpCachePolicySettings settings, HttpContext context) {
-            if (directive == CacheDirectives.NoCache || directive == CacheDirectives.NoStore) {
-                return true;
-            }
-            if (directive.StartsWith(CacheDirectives.MaxAge)) {
-                int maxage;
-                try {
-                    int.TryParse(directive.Substring(8), out maxage);
-                }
-                catch {
-                    maxage = -1;
-                }
-
-                if (maxage < 0) {
-                    return false;
-                }
-                int age =
-                    (int)
-                        ((context.Timestamp.Ticks - settings.UtcTimestampCreated.Ticks) /
-                         TimeSpan.TicksPerSecond);
-                if (age < maxage) {
-                    return false;
-                }
-                return true;
-            }
-            if (!directive.StartsWith(CacheDirectives.MinFresh)) {
-                return false;
-            }
-            int minfresh = -1;
-            Int32.TryParse((directive.Substring(10)), out minfresh);
-
-            if (minfresh < 0 || settings.UtcExpires == DateTime.MinValue || settings.SlidingExpiration) {
-                return false;
-            }
-            int fresh =
-                (int)((settings.UtcExpires.Ticks - context.Timestamp.Ticks) / TimeSpan.TicksPerSecond);
-            if (fresh >= minfresh) {
-                return false;
-            }
-            return true;
         }
 
         public static bool IsHttpMethodSupported(HttpRequest request) {
@@ -1148,5 +869,270 @@
             return false;
         }
 
+        public static async Task<object> GetAsync(string key) {
+            OutputCacheProviderAsync provider = GetProvider(HttpContext.Current);
+            object result = await provider.GetAsync(key);
+            var oce = result as OutputCacheEntry;
+            if (oce == null) {
+                return result;
+            }
+            if (HasDependencyChanged(oce.DependenciesKey, oce.Dependencies, oce.KernelCacheUrl, key, provider.Name)) {
+                await RemoveFromProvider(key, provider.Name);
+                return null;
+            }
+            result = Convert(oce);
+            return result;
+        }
+
+        /*
+        * Return a key to lookup a cached response. The key contains 
+        * the path and optionally, vary parameters, vary headers, custom strings,
+        * and form posted data.
+        */
+        public static string CreateOutputCachedItemKey(HttpContext context, CachedVary cachedVary) {
+            return CreateOutputCachedItemKey(context.Request.Path, context.Request.HttpMethod, context, cachedVary);
+        }
+
+        /*
+         * GetAcceptableEncoding finds an acceptable coding for the given
+         * Accept-Encoding header (see RFC 2616)
+         * returns either i) an acceptable index in contentEncodings, ii) -1 if the identity is acceptable, or iii) -2 if nothing is acceptable
+         */
+        public static int GetAcceptableEncoding(string[] contentEncodings, int startIndex, string acceptEncoding) {
+            // The format of Accept-Encoding is ( 1#( codings [ ";" "q" "=" qvalue ] ) | "*" )
+            if (string.IsNullOrEmpty(acceptEncoding)) {
+                return -1; // use "identity"
+            }
+
+            // is there only one token?
+            int tokenEnd = acceptEncoding.IndexOf(',');
+            if (tokenEnd == -1) {
+                string acceptEncodingWithoutWeight = acceptEncoding;
+                tokenEnd = acceptEncoding.IndexOf(';');
+                if (tokenEnd > -1) {
+                    // remove weight
+                    int space = acceptEncoding.IndexOf(' ');
+                    if (space > -1 && space < tokenEnd) {
+                        tokenEnd = space;
+                    }
+                    acceptEncodingWithoutWeight = acceptEncoding.Substring(0, tokenEnd);
+                    if (Math.Abs(ParseWeight(acceptEncoding, tokenEnd)) < 0) {
+                        //weight is 0, use "identity" only if it is acceptable
+                        bool identityIsAcceptable = acceptEncodingWithoutWeight != Identity &&
+                                                    acceptEncodingWithoutWeight != Asterisk;
+                        return (identityIsAcceptable) ? -1 : -2;
+                    }
+                }
+                if (acceptEncodingWithoutWeight == Asterisk) {
+                    // just return the index of the first entry in the list, since it is acceptable
+                    return 0;
+                }
+                for (int i = startIndex; i < contentEncodings.Length; i++) {
+                    if (string.Equals(contentEncodings[i], acceptEncodingWithoutWeight,
+                        StringComparison.OrdinalIgnoreCase)) {
+                        return i; // found
+                    }
+                }
+                return -1; // not found, use "identity"
+            }
+            // there are multiple tokens
+            int bestCodingIndex = -1;
+            double bestCodingWeight = 0;
+            for (int i = startIndex; i < contentEncodings.Length; i++) {
+                string coding = contentEncodings[i];
+                // get weight of current coding
+                double weight = GetAcceptableEncodingHelper(coding, acceptEncoding);
+                // if it is 1, use it
+                if (Math.Abs(weight - 1) < Tolerance) {
+                    return i;
+                }
+                // if it is the best so far, remember it
+                if (!(weight > bestCodingWeight)) {
+                    continue;
+                }
+                bestCodingIndex = i;
+                bestCodingWeight = weight;
+            }
+            // WOS 1985352: use "identity" only if it is acceptable
+            if (bestCodingIndex == -1 && !IsIdentityAcceptable(acceptEncoding)) {
+                bestCodingIndex = -2;
+            }
+            return bestCodingIndex; // coding index with highest weight, possibly -1 or -2
+        }
+
+        public static bool IsAcceptableEncoding(string contentEncoding, string acceptEncoding) {
+            if (string.IsNullOrEmpty(contentEncoding)) {
+                // if Content-Encoding is not set treat it as the identity
+                contentEncoding = Identity;
+            }
+            if (string.IsNullOrEmpty(acceptEncoding)) {
+                // only the identity is acceptable if Accept-Encoding is not set
+                return (contentEncoding == Identity);
+            }
+            double weight = GetAcceptableEncodingHelper(contentEncoding, acceptEncoding);
+            const double tolerance = 0;
+            return !(Math.Abs(weight) < tolerance) &&
+                   (!(weight <= 0) || Math.Abs(GetAcceptableEncodingHelper(Asterisk, acceptEncoding)) > 0);
+        }
+
+        public static bool IsResponseCacheable(HttpContext context) {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+            HttpCachePolicy cache = response.Cache;
+            if (!cache.IsModified()) {
+                return false;
+            }
+            if (response.StatusCode != 200) {
+                return false;
+            }
+            if (request.HttpMethod != HttpMethods.GET && request.HttpMethod != HttpMethods.POST) {
+                return false;
+            }
+            if (response.HeadersWritten) {
+                return false;
+            }
+            var cacheability = cache.GetCacheability();
+            if (cacheability != HttpCacheability.Public &&
+                cacheability != HttpCacheability.ServerAndPrivate &&
+                cacheability != HttpCacheability.ServerAndNoCache) {
+                return false;
+            }
+            if (cache.GetNoServerCaching()) {
+                return false;
+            }
+
+            if (OutputCacheHelper.ContainsNonShareableCookies(response)) {
+                return false;
+            }
+            bool hasExpirationPolicy = !cache.HasSlidingExpiration() &&
+                                       (cache.GetExpires() != DateTime.MinValue || cache.GetMaxAge() != TimeSpan.Zero);
+            bool hasValidationPolicy = cache.GetLastModifiedFromFileDependencies() ||
+                                       cache.GetETagFromFileDependencies() ||
+                                       OutputCacheUtility.GetValidationCallbacks(response).Any() ||
+                                       (cache.IsValidUntilExpires() && !cache.HasSlidingExpiration());
+            if (!hasExpirationPolicy && !hasValidationPolicy) {
+                return false;
+            }
+            if (cache.VaryByHeaders[Asterisk]) {
+                return false;
+            }
+            bool acceptParams = (cache.VaryByParams.IgnoreParams ||
+                                 (Equals(cache.VaryByParams.GetParams(), new[] { Asterisk })) ||
+                                 (cache.VaryByParams.GetParams() != null && cache.VaryByParams.GetParams().Any()));
+            if (!acceptParams && (request.HttpMethod == HttpMethods.POST || (request.QueryString.Count > 0))) {
+                return false;
+            }
+            return cache.VaryByContentEncodings.GetContentEncodings() == null ||
+                   OutputCacheHelper.IsCacheableEncoding(context.Response.ContentEncoding,
+                       cache.VaryByContentEncodings);
+        }
+
+        public static async Task CacheResponseAsync(HttpContext context) {
+            HttpResponse response = context.Response;
+            CachedVary cachedVary = null; ;
+            string keyRawResponse;
+            /* Add response to cache.*/
+            OutputCacheHelper.UpdateCachedHeaders(response);
+            //look at response cachepolicy and decide if to cache it
+            HttpCachePolicySettings settings = OutputCacheHelper.GetCurrentSettings(response);
+            string[] varyByHeaders = settings.VaryByHeaders;
+            string[] varyByParams = settings.IgnoreParams ? null : settings.VaryByParams;
+            /* Create the key if it was not created in OnEnter */
+            string key = OutputCacheHelper.CreateOutputCachedItemKey(context, null);
+
+            if (settings.VaryByContentEncodings == null && varyByHeaders == null && varyByParams == null &&
+                settings.VaryByCustom == null) {
+                // This is not a varyBy item.
+                keyRawResponse = key;
+            }
+            else {
+                /*
+                 * There is a vary in the cache policy. We handle this
+                 * by adding another item to the cache which contains
+                 * a list of the vary headers. A request for the item
+                 * without the vary headers in the key will return this 
+                 * item. From the headers another key can be constructed
+                 * to lookup the item with the raw response.
+                 */
+                if (varyByHeaders != null) {
+                    for (int i = 0, n = varyByHeaders.Length; i < n; i++) {
+                        varyByHeaders[i] = "HTTP_" + CultureInfo.InvariantCulture.TextInfo.ToUpper(
+                            varyByHeaders[i].Replace('-', '_'));
+                    }
+                }
+                bool varyByAllParams = false;
+                if (varyByParams != null) {
+                    varyByAllParams = (varyByParams.Length == 1 && varyByParams[0] == Asterisk);
+                    if (varyByAllParams) {
+                        varyByParams = null;
+                    }
+                    else {
+                        for (int i = 0, n = varyByParams.Length; i < n; i++) {
+                            varyByParams[i] = CultureInfo.InvariantCulture.TextInfo.ToLower(varyByParams[i]);
+                        }
+                    }
+                }
+                cachedVary = new CachedVary {
+                    ContentEncodings = settings.VaryByContentEncodings,
+                    Headers = varyByHeaders,
+                    Params = varyByParams,
+                    VaryByAllParams = varyByAllParams,
+                    VaryByCustom = settings.VaryByCustom
+                };
+                keyRawResponse = OutputCacheHelper.CreateOutputCachedItemKey(context, cachedVary);
+                if (keyRawResponse == null) {
+                    return;
+                }
+                // it is possible that the user code calculating custom vary-by
+                // string would Flush making the response non-cacheable. Check fo it here.
+                if (response.HeadersWritten) {
+                    return;
+                }
+            }
+            DateTime utcExpires = Cache.NoAbsoluteExpiration;
+            TimeSpan slidingDelta = Cache.NoSlidingExpiration;
+            if (settings.SlidingExpiration) {
+                slidingDelta = settings.SlidingDelta;
+            }
+            else if (settings.MaxAge != TimeSpan.MinValue) {
+                DateTime utcTimestamp = (settings.UtcTimestampCreated != DateTime.MinValue)
+                    ? settings.UtcTimestampCreated
+                    : context.Timestamp;
+                utcExpires = utcTimestamp + settings.MaxAge;
+            }
+            else if (settings.UtcExpires != DateTime.MinValue) {
+                utcExpires = settings.UtcExpires;
+            }
+            // Check and ensure that item hasn't expired:
+            await InsertResponseAsync(key, utcExpires, context, cachedVary, settings, keyRawResponse, slidingDelta);
+        }
+
+        public static void UpdateCachedResponse(HttpContext context, HttpCachePolicySettings settings, HttpRawResponse rawResponse) {
+            /* Try to satisfy a conditional request. The cached response
+            * must satisfy all conditions that are present.
+            * We can only satisfy a conditional request if the response
+            * is buffered and has no substitution blocks.
+            * N.B. RFC 2616 says conditional requests only occur 
+            * with the GET method, but we try to satisfy other
+            * verbs (HEAD, POST) as well.*/
+            if (CheckIfModifiedSince(context, settings) && CheckIfNoneMatch(context, settings)) {
+                /*
+                 * Send 304 Not Modified
+                 */
+                if (context.Response.HeadersWritten) {
+                    context.Response.ClearHeaders();
+                }
+                context.Response.Clear();
+                context.Response.StatusCode = 304;
+            }
+            else {
+                // Check and see if the cachedRawResponse is from the disk
+                // If so, we must clone the HttpRawResponse before sending it
+                // UseSnapshot calls ClearAll
+                OutputCacheHelper.UseSnapshot(rawResponse, context.Request.HttpMethod != "HEAD", context.Response);
+            }
+            OutputCacheHelper.ResetFromHttpCachePolicySettings(settings, context.Timestamp, context.Response);
+        }
+        #endregion
     }
 }

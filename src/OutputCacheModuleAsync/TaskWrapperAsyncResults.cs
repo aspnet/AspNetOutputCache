@@ -13,6 +13,7 @@
         }
 
         public object AsyncState { get; }
+
         public WaitHandle AsyncWaitHandle => ((IAsyncResult) Task).AsyncWaitHandle;
 
         public bool CompletedSynchronously

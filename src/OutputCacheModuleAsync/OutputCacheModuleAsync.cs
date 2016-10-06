@@ -42,70 +42,68 @@
 
         private async Task OnEnterAsync(object source, EventArgs eventArgs) {
             var app = (HttpApplication)source;
-            HttpContext context = app.Context;
-            HttpRequest request = context.Request;
-            if (!OutputCacheHelper.IsHttpMethodSupported(request)) {
+            var outputCacheHelper = new OutputCacheHelper(new HttpContextWrapper(app.Context));
+            if (!outputCacheHelper.IsHttpMethodSupported()) {
                 return;
             }
 
             // Create a lookup key. Also store the key in global parameter _key to be used inside OnLeave() later   
-            string key = OutputCacheHelper.CreateOutputCachedItemKey(context, null);
+            string key = outputCacheHelper.CreateOutputCachedItemKey(null);
 
             // Lookup the cache vary using the key
-            object item = await OutputCacheHelper.GetAsync(key);
+            object item = await outputCacheHelper.GetAsync(key);
             if (item == null) {
                 return;
             }
+
             // 'item' may be one of the following:
             //  - a CachedVary object (if the object varies by something)
             //  - a CachedRawResponse object (i.e. it doesn't vary on anything)
             //  First assume it's a CacheVary
-            var cachedVary = item as CachedVary;
             object cachedItem = null;
+            var cachedVary = item as CachedVary;
             if (cachedVary != null) {
-                cachedItem = await OutputCacheHelper.GetAsCacheVaryAsync(cachedVary, context);
-                if (cachedItem == null)
-                    return;
+                cachedItem = await outputCacheHelper.GetAsCacheVaryAsync(cachedVary);
+            }
+            if (cachedItem == null) {
+                return;
             }
 
             // From this point on, we have an Raw Response entry to work with.
             var cachedRawResponse = (CachedRawResponse)cachedItem;
             HttpCachePolicySettings settings = cachedRawResponse.CachePolicy;
-            if (OutputCacheHelper.CheckCachedVary(request, cachedVary, settings)) {
+            if (outputCacheHelper.CheckCachedVary(cachedVary, settings)) {
                 return;
             }
-            if (settings.IgnoreRangeRequests && OutputCacheHelper.IsRangeRequest(request)) {
+            if (settings.IgnoreRangeRequests && outputCacheHelper.IsRangeRequest()) {
                 return;
             }
+            if (outputCacheHelper.CheckHeaders(settings)) {
+                return;
+            }
+            if (await outputCacheHelper.CheckValidityAsync(key, settings)) {
+                return;
+            }
+            if (!outputCacheHelper.IsContentEncodingAcceptable(cachedVary, cachedRawResponse.RawResponse)) {
+                return;
+            }
+            outputCacheHelper.UpdateCachedResponse(settings, cachedRawResponse.RawResponse);
 
-            if (OutputCacheHelper.CheckHeaders(settings, context)) {
-                return;
-            }
-            if (await OutputCacheHelper.CheckValidityAsync(key, settings, context)) {
-                return;
-            }
-
-            HttpRawResponse rawResponse = cachedRawResponse.RawResponse;
-            if (!OutputCacheHelper.IsContentEncodingAcceptable(cachedVary, request, rawResponse)) {
-                return;
-            }
-            OutputCacheHelper.UpdateCachedResponse(context, settings, rawResponse);
-
-            // re-insert entry in kernel cache if necessary
+            //Re-insert entry in kernel cache if necessary
             string originalCacheUrl = cachedRawResponse.KernelCacheUrl;
             if (originalCacheUrl != null) {
-                OutputCacheUtility.SetupKernelCaching(originalCacheUrl, context.Response);
+                OutputCacheUtility.SetupKernelCaching(originalCacheUrl, app.Context.Response);
             }
+
+            //Complete request
             app.CompleteRequest();
         }
 
         private async Task OnLeaveAsync(object source, EventArgs eventArgs) {
-            HttpContext context = ((HttpApplication)source).Context;
-            //Determine whether the response is cacheable.
-            if (!OutputCacheHelper.IsResponseCacheable(context)) {
-                return;
+            var outputCacheHelper = new OutputCacheHelper(new HttpContextWrapper(((HttpApplication)source).Context));
+            if (outputCacheHelper.IsResponseCacheable()) {
+                await outputCacheHelper.CacheResponseAsync();
             }
-            await OutputCacheHelper.CacheResponseAsync(context);
         }
     }
 }

@@ -42,16 +42,16 @@
 
         private async Task OnEnterAsync(object source, EventArgs eventArgs) {
             var app = (HttpApplication)source;
-            var outputCacheHelper = new OutputCacheHelper(new HttpContextWrapper(app.Context));
-            if (!outputCacheHelper.IsHttpMethodSupported()) {
+            var helper = new OutputCacheHelper(app.Context);
+            if (!helper.IsHttpMethodSupported()) {
                 return;
             }
 
             // Create a lookup key. Also store the key in global parameter _key to be used inside OnLeave() later   
-            string key = outputCacheHelper.CreateOutputCachedItemKey(null);
+            string key = helper.CreateOutputCachedItemKey(null);
 
             // Lookup the cache vary using the key
-            object item = await outputCacheHelper.GetAsync(key);
+            object item = await helper.GetAsync(key);
             if (item == null) {
                 return;
             }
@@ -63,7 +63,7 @@
             object cachedItem = null;
             var cachedVary = item as CachedVary;
             if (cachedVary != null) {
-                cachedItem = await outputCacheHelper.GetAsCacheVaryAsync(cachedVary);
+                cachedItem = await helper.GetAsCacheVaryAsync(cachedVary);
             }
             if (cachedItem == null) {
                 return;
@@ -72,22 +72,22 @@
             // From this point on, we have an Raw Response entry to work with.
             var cachedRawResponse = (CachedRawResponse)cachedItem;
             HttpCachePolicySettings settings = cachedRawResponse.CachePolicy;
-            if (outputCacheHelper.CheckCachedVary(cachedVary, settings)) {
+            if (helper.CheckCachedVary(cachedVary, settings)) {
                 return;
             }
-            if (settings.IgnoreRangeRequests && outputCacheHelper.IsRangeRequest()) {
+            if (settings.IgnoreRangeRequests && helper.IsRangeRequest()) {
                 return;
             }
-            if (outputCacheHelper.CheckHeaders(settings)) {
+            if (helper.CheckHeaders(settings)) {
                 return;
             }
-            if (await outputCacheHelper.CheckValidityAsync(key, settings)) {
+            if (await helper.CheckValidityAsync(key, settings)) {
                 return;
             }
-            if (!outputCacheHelper.IsContentEncodingAcceptable(cachedVary, cachedRawResponse.RawResponse)) {
+            if (!helper.IsContentEncodingAcceptable(cachedVary, cachedRawResponse.RawResponse)) {
                 return;
             }
-            outputCacheHelper.UpdateCachedResponse(settings, cachedRawResponse.RawResponse);
+            helper.UpdateCachedResponse(settings, cachedRawResponse.RawResponse);
 
             //Re-insert entry in kernel cache if necessary
             string originalCacheUrl = cachedRawResponse.KernelCacheUrl;
@@ -100,9 +100,9 @@
         }
 
         private async Task OnLeaveAsync(object source, EventArgs eventArgs) {
-            var outputCacheHelper = new OutputCacheHelper(new HttpContextWrapper(((HttpApplication)source).Context));
-            if (outputCacheHelper.IsResponseCacheable()) {
-                await outputCacheHelper.CacheResponseAsync();
+            var helper = new OutputCacheHelper(((HttpApplication)source).Context);
+            if (helper.IsResponseCacheable()) {
+                await helper.CacheResponseAsync();
             }
         }
     }

@@ -21,7 +21,7 @@
         }
     }
 
-    class CryptoUtil {
+    static class CryptoUtil {
         /// <summary>
         /// Computes the SHA256 hash of a given input.
         /// </summary>
@@ -50,27 +50,13 @@
         }
     }
 
-    class HttpDate {
+    static class HttpDate {
         private static readonly int[] s_tensDigit = { 0, 10, 20, 30, 40, 50, 60, 70, 80, 90 };
-
-        private static int Atoi2(string s, int startIndex) {
-            try {
-                int tens = s[0 + startIndex] - '0';
-                int ones = s[1 + startIndex] - '0';
-
-                return s_tensDigit[tens] + ones;
-            }
-            catch {
-                throw new FormatException("Atio2Badstring");
-            }
-        }
-
         private static readonly string[] s_months = {
             "Jan", "Feb", "Mar", "Apr",
             "May", "Jun", "Jul", "Aug",
             "Sep", "Oct", "Nov", "Dec"
         };
-
         // Custom table for make_month() for mapping "Apr" to 4
         private static readonly sbyte[] s_monthIndexTable = {
             -1, (sbyte) 'A', 2, 12, -1, -1, -1, 8, // A to G
@@ -82,54 +68,7 @@
             9, -1, (sbyte) 'R', -1, 10, -1, 11, -1, // p to w
             -1, 5, -1, -1, -1, -1, -1, -1 // x to z
         };
-
-        private static int make_month(string s, int startIndex) {
-            //
-            // use the third character as the index
-            //
-            int i = (s[2 + startIndex] - 0x40) & 0x3F;
-            sbyte monthIndex = s_monthIndexTable[i];
-            if (monthIndex >= 13) {
-                //
-                // ok, we need to look at the second character
-                //
-                switch (monthIndex) {
-                    case (sbyte)'N':
-                        //
-                        // we got an N which we need to resolve further
-                        //
-                        //
-                        // if s[1] is 'u' then Jun, if 'a' then Jan
-                        //
-                        monthIndex =
-                            (sbyte)(s_monthIndexTable[(s[1 + startIndex] - 0x40) & 0x3f] == (sbyte)'A' ? 1 : 6);
-                        break;
-                    case (sbyte)'R':
-                        //
-                        // if s[1] is 'a' then March, if 'p' then April
-                        //
-                        monthIndex =
-                            (sbyte)(s_monthIndexTable[(s[1 + startIndex] - 0x40) & 0x3f] == (sbyte)'A' ? 3 : 4);
-                        break;
-                    default:
-                        throw new FormatException("MakeMonthBadstring");
-                }
-            }
-            string monthstring = s_months[monthIndex - 1];
-            if ((s[0 + startIndex] == monthstring[0]) &&
-                (s[1 + startIndex] == monthstring[1]) &&
-                (s[2 + startIndex] == monthstring[2])) {
-                return (monthIndex);
-            }
-            if ((char.ToUpper(s[0 + startIndex], CultureInfo.InvariantCulture) == monthstring[0]) &&
-                (char.ToLower(s[1 + startIndex], CultureInfo.InvariantCulture) == monthstring[1]) &&
-                (char.ToLower(s[2 + startIndex], CultureInfo.InvariantCulture) == monthstring[2])) {
-                return monthIndex;
-            }
-            throw new FormatException("MakeMonthBadstring");
-        }
-
-       public static DateTime UtcParse(string time) {
+        public static DateTime UtcParse(string time) {
             int i;
             int year, month, day, hour, minute, second;
             if (time == null) {
@@ -190,9 +129,67 @@
             }
             return new DateTime(year, month, day, hour, minute, second, DateTimeKind.Utc);
         }
-    }
 
-    class StringUtil {
+        private static int Atoi2(string s, int startIndex) {
+            try {
+                int tens = s[0 + startIndex] - '0';
+                int ones = s[1 + startIndex] - '0';
+
+                return s_tensDigit[tens] + ones;
+            }
+            catch {
+                throw new FormatException("Atio2Badstring");
+            }
+        }
+
+        private static int make_month(string s, int startIndex) {
+            //
+            // use the third character as the index
+            //
+            int i = (s[2 + startIndex] - 0x40) & 0x3F;
+            sbyte monthIndex = s_monthIndexTable[i];
+            if (monthIndex >= 13) {
+                //
+                // ok, we need to look at the second character
+                //
+                switch (monthIndex) {
+                    case (sbyte)'N':
+                        //
+                        // we got an N which we need to resolve further
+                        //
+                        //
+                        // if s[1] is 'u' then Jun, if 'a' then Jan
+                        //
+                        monthIndex =
+                            (sbyte)(s_monthIndexTable[(s[1 + startIndex] - 0x40) & 0x3f] == (sbyte)'A' ? 1 : 6);
+                        break;
+                    case (sbyte)'R':
+                        //
+                        // if s[1] is 'a' then March, if 'p' then April
+                        //
+                        monthIndex =
+                            (sbyte)(s_monthIndexTable[(s[1 + startIndex] - 0x40) & 0x3f] == (sbyte)'A' ? 3 : 4);
+                        break;
+                    default:
+                        throw new FormatException("MakeMonthBadstring");
+                }
+            }
+            string monthstring = s_months[monthIndex - 1];
+            if ((s[0 + startIndex] == monthstring[0]) &&
+                (s[1 + startIndex] == monthstring[1]) &&
+                (s[2 + startIndex] == monthstring[2])) {
+                return (monthIndex);
+            }
+            if ((char.ToUpper(s[0 + startIndex], CultureInfo.InvariantCulture) == monthstring[0]) &&
+                (char.ToLower(s[1 + startIndex], CultureInfo.InvariantCulture) == monthstring[1]) &&
+                (char.ToLower(s[2 + startIndex], CultureInfo.InvariantCulture) == monthstring[2])) {
+                return monthIndex;
+            }
+            throw new FormatException("MakeMonthBadstring");
+        }
+     }
+
+    static class StringUtil {
         public static bool StringArrayEquals(string[] a, string[] b) {
             if ((a == null) != (b == null)) {
                 return false;

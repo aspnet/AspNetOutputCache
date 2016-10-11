@@ -666,12 +666,12 @@
             foreach (string h in response.Headers.AllKeys) {
                 if
                     (h.Equals(HttpHeaders.Server, StringComparison.OrdinalIgnoreCase) ||
-                     h == HttpHeaders.SetCookie ||
-                     h == HttpHeaders.CacheControl ||
-                     h == HttpHeaders.Expires ||
-                     h == HttpHeaders.LastModified ||
-                     h == HttpHeaders.Etag ||
-                     h == HttpHeaders.Vary) {
+                     h.Equals(HttpHeaders.SetCookie, StringComparison.OrdinalIgnoreCase) ||
+                     h.Equals(HttpHeaders.CacheControl, StringComparison.OrdinalIgnoreCase) ||
+                     h.Equals(HttpHeaders.Expires, StringComparison.OrdinalIgnoreCase) ||
+                     h.Equals(HttpHeaders.LastModified, StringComparison.OrdinalIgnoreCase) ||
+                     h.Equals(HttpHeaders.Etag, StringComparison.OrdinalIgnoreCase) ||
+                     h.Equals(HttpHeaders.Vary, StringComparison.OrdinalIgnoreCase)) {
                     continue;
                 }
                 headers.Add(h, response.Headers[h]);

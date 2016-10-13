@@ -47,7 +47,7 @@
             if (headers == null) {
                 return IsAcceptableEncoding(null, acceptEncoding);
             }
-            string contentEncoding = headers.Cast<string>().FirstOrDefault(h => h == HttpHeaders.ContentEncoding);
+            string contentEncoding = headers.Cast<string>().FirstOrDefault(h => h.Equals(HttpHeaders.ContentEncoding, StringComparison.OrdinalIgnoreCase));
             return IsAcceptableEncoding(contentEncoding, acceptEncoding);
         }
 
@@ -64,7 +64,7 @@
                 if (pragma == null) {
                     return false;
                 }
-                if (!pragma.Split(s_fieldSeparators).Any(t => t == null || t == CacheDirectives.NoCache)) {
+                if (!pragma.Split(s_fieldSeparators).Any(t => t == null || t.Equals(CacheDirectives.NoCache, StringComparison.OrdinalIgnoreCase))) {
                     return false;
                 }
                 return true;
@@ -180,7 +180,7 @@
             // From this point on, we have an entry to work with.
             if (cachedVary == null && !settings.IgnoreParams) {
                 // This cached output has no vary policy, so make sure it doesn't have a query string or form post.
-                if (request.HttpMethod == HttpMethods.POST) {
+                if (request.HttpMethod.Equals(HttpMethods.POST, StringComparison.OrdinalIgnoreCase)) {
                     return true;
                 }
                 if (request.QueryString.Count > 0) {
@@ -245,7 +245,7 @@
                     acceptEncodingWithoutWeight = acceptEncoding.Substring(0, tokenEnd);
                     if (ParseWeight(acceptEncoding, tokenEnd) == 0) {
                         //weight is 0, use "identity" only if it is acceptable
-                        bool identityIsAcceptable = acceptEncodingWithoutWeight != Identity &&
+                        bool identityIsAcceptable = !acceptEncodingWithoutWeight.Equals(Identity, StringComparison.OrdinalIgnoreCase) &&
                                                     acceptEncodingWithoutWeight != Asterisk;
                         return (identityIsAcceptable) ? -1 : -2;
                     }
@@ -294,7 +294,7 @@
             }
             if (string.IsNullOrEmpty(acceptEncoding)) {
                 // only the identity is acceptable if Accept-Encoding is not set
-                return (contentEncoding == Identity);
+                return (contentEncoding.Equals(Identity, StringComparison.OrdinalIgnoreCase));
             }
             double weight = GetAcceptableEncodingHelper(contentEncoding, acceptEncoding);
             return !(weight == 0) &&
@@ -343,7 +343,7 @@
             bool acceptParams = (cache.VaryByParams.IgnoreParams ||
                                  (Equals(cache.VaryByParams.GetParams(), new[] { Asterisk })) ||
                                  (cache.VaryByParams.GetParams() != null && cache.VaryByParams.GetParams().Any()));
-            if (!acceptParams && (request.HttpMethod == HttpMethods.POST || (request.QueryString.Count > 0))) {
+            if (!acceptParams && (request.HttpMethod.Equals(HttpMethods.POST, StringComparison.OrdinalIgnoreCase) || (request.QueryString.Count > 0))) {
                 return false;
             }
             return cache.VaryByContentEncodings.GetContentEncodings() == null ||
@@ -452,7 +452,7 @@
                 // Check and see if the cachedRawResponse is from the disk
                 // If so, we must clone the HttpRawResponse before sending it
                 // UseSnapshot calls ClearAll
-                UseSnapshot(rawResponse, request.HttpMethod != "HEAD");
+                UseSnapshot(rawResponse, !request.HttpMethod.Equals("HEAD", StringComparison.OrdinalIgnoreCase));
             }
             ResetFromHttpCachePolicySettings(settings, context.Timestamp);
         }
@@ -499,7 +499,7 @@
             int idStartIndex = OutputcacheKeyprefixDependencies.Length;
             int idLength = depKey.Length - idStartIndex;
             // have the file dependencies changed?
-            if (string.Compare(dep.GetUniqueID(), 0, depKey, idStartIndex, idLength, StringComparison.Ordinal) == 0) {
+            if (string.Compare(dep.GetUniqueID(), 0, depKey, idStartIndex, idLength, StringComparison.OrdinalIgnoreCase) == 0) {
                 // file dependencies have not changed--cache them with callback to remove OutputCacheEntry if they change
                 var dce = new DependencyCacheEntry {
                     RawResponseKey = oceKey,
@@ -628,7 +628,7 @@
                 return true;
             }
             // return true if there is no Content-Encoding header or the Content-Encoding header is listed
-            return contentEncoding == null || varyByContentEncodings.GetContentEncodings().Any(varyByContentEncoding => varyByContentEncoding == contentEncoding.ToString());
+            return contentEncoding == null || varyByContentEncodings.GetContentEncodings().Any(varyByContentEncoding => varyByContentEncoding.Equals(contentEncoding.ToString(), StringComparison.OrdinalIgnoreCase));
         }
 
         private bool ContainsNonShareableCookies() {
@@ -818,7 +818,7 @@
         }
 
         private string CreateOutputCachedItemKey(string path, string verb, CachedVary cachedVary) {
-            StringBuilder sb = verb == HttpMethods.POST
+            StringBuilder sb = verb.Equals(HttpMethods.POST,StringComparison.OrdinalIgnoreCase)
                 ? new StringBuilder(OutputcacheKeyprefixPost, path.Length + OutputcacheKeyprefixPost.Length)
                 : new StringBuilder(OutputcacheKeyprefixGet, path.Length + OutputcacheKeyprefixGet.Length);
             sb.Append(CultureInfo.InvariantCulture.TextInfo.ToLower(path));
@@ -851,7 +851,7 @@
                         break;
                     default:
                         sb.Append("F");
-                        if (verb == HttpMethods.POST) {
+                        if (verb.Equals(HttpMethods.POST,StringComparison.OrdinalIgnoreCase)) {
                             a = cachedVary.Params;
                             if ((a != null || cachedVary.VaryByAllParams)) {
                                 col = request.Form;
@@ -904,7 +904,7 @@
                  * part of the key.
                  */
             sb.Append("D");
-            if (verb == HttpMethods.POST &&
+            if (verb.Equals(HttpMethods.POST, StringComparison.OrdinalIgnoreCase) &&
                 cachedVary.VaryByAllParams &&
                 request.Form.Count == 0) {
 
@@ -931,7 +931,7 @@
                 return sb.ToString();
             }
             string coding = response.HeaderEncoding.ToString();
-            if (contentEncodings.Any(t => t == coding)) {
+            if (contentEncodings.Any(t => t.Equals(coding,StringComparison.OrdinalIgnoreCase))) {
                 sb.Append(coding);
             }
             // The key must end in "E", or the VaryByContentEncoding feature will break. Unfortunately, 
@@ -1070,7 +1070,7 @@
         }
 
         private bool checkMaxAge(string directive, HttpCachePolicySettings settings) {
-            if (directive == CacheDirectives.NoCache || directive == CacheDirectives.NoStore) {
+            if (directive.Equals(CacheDirectives.NoCache, StringComparison.OrdinalIgnoreCase) || directive.Equals(CacheDirectives.NoStore, StringComparison.OrdinalIgnoreCase)) {
                 return true;
             }
             if (directive.StartsWith(CacheDirectives.MaxAge)) {

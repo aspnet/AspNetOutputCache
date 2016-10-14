@@ -59,18 +59,24 @@
             // 'item' may be one of the following:
             //  - a CachedVary object (if the object varies by something)
             //  - a CachedRawResponse object (i.e. it doesn't vary on anything)
-            //  First assume it's a CacheVary
-            object cachedItem = null;
+            //  First assume it's a CacheVary and try to get the cachedItem with it
+            CachedRawResponse cachedRawResponse;
             var cachedVary = item as CachedVary;
             if (cachedVary != null) {
-                cachedItem = await helper.GetAsCacheVaryAsync(cachedVary);
+                var cachedItem = await helper.GetAsCacheVaryAsync(cachedVary);
+                if (cachedItem == null) {
+                    return;
+                }
+                 cachedRawResponse = (CachedRawResponse)cachedItem;
             }
-            if (cachedItem == null) {
+            else {
+                cachedRawResponse = item as CachedRawResponse;
+            }
+            if (cachedRawResponse == null) {
                 return;
             }
 
             // From this point on, we have an Raw Response entry to work with.
-            var cachedRawResponse = (CachedRawResponse)cachedItem;
             HttpCachePolicySettings settings = cachedRawResponse.CachePolicy;
             if (helper.CheckCachedVary(cachedVary, settings)) {
                 return;

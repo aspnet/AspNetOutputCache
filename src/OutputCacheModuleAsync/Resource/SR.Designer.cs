@@ -79,15 +79,6 @@ namespace Microsoft.AspNet.OutputCache.Resource {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Microsoft.AspNet.OutputCache Default In-Memory Provider.
-        /// </summary>
-        internal static string Microsoft_AspNet_OutputCache_Default_InMemory_Provider {
-            get {
-                return ResourceManager.GetString("Microsoft_AspNet_OutputCache_Default_InMemory_Provider", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to No UniqueId Cache Dependency.
         /// </summary>
         internal static string No_UniqueId_Cache_Dependency {

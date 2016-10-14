@@ -123,9 +123,6 @@
   <data name="Cannot_use_snapshot_after_headers_sent" xml:space="preserve">
     <value>Cannot use snapshot after headers sent.</value>
   </data>
-  <data name="Microsoft_AspNet_OutputCache_Default_InMemory_Provider" xml:space="preserve">
-    <value>Microsoft.AspNet.OutputCache Default In-Memory Provider</value>
-  </data>
   <data name="Provider_does_not_support_policy_for_responses" xml:space="preserve">
     <value>Provider does not support policy for responses.</value>
   </data>

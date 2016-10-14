@@ -66,10 +66,12 @@
             <AuthCodeCert>10006</AuthCodeCert>
             <StrongNameCert>72</StrongNameCert>
         </CodeSign>
+<!--
         <CodeSign Include="$(OutputPath)Microsoft.AspNet.OutputCache.CustomOutputCacheProvider.dll">
             <AuthCodeCert>10006</AuthCodeCert>
             <StrongNameCert>72</StrongNameCert>
         </CodeSign>
+-->
     </ItemGroup>  
 
 </Project>

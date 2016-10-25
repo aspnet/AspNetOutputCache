@@ -60,16 +60,15 @@
             //  - a CachedVary object (if the object varies by something)
             //  - a CachedRawResponse object (i.e. it doesn't vary on anything)
             //  First assume it's a CacheVary and try to get the cachedItem with it
-            CachedRawResponse cachedRawResponse;
+            CachedRawResponse cachedRawResponse = null;
             var cachedVary = item as CachedVary;
             if (cachedVary != null) {
                 var cachedItem = await helper.GetAsCacheVaryAsync(cachedVary);
-                if (cachedItem == null) {
-                    return;
+                if (cachedItem != null) {
+                    cachedRawResponse = (CachedRawResponse)cachedItem;
                 }
-                 cachedRawResponse = (CachedRawResponse)cachedItem;
             }
-            else {
+            if(cachedRawResponse == null) {
                 cachedRawResponse = item as CachedRawResponse;
             }
             if (cachedRawResponse == null) {

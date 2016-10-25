@@ -30,8 +30,8 @@
         }
 
         public override object Add(string key, object entry, DateTime utcExpiry) {
-            DateTimeOffset expiration = (utcExpiry == Cache.NoAbsoluteExpiration) ? ObjectCache.InfiniteAbsoluteExpiration : utcExpiry;           
-            return _cache.Add(key, entry, expiration) ? entry : null;
+            DateTimeOffset expiration = (utcExpiry == Cache.NoAbsoluteExpiration) ? ObjectCache.InfiniteAbsoluteExpiration : utcExpiry;
+            return _cache.AddOrGetExisting(key, entry, expiration);
         }
 
         public override void Set(string key, object entry, DateTime utcExpiry) {

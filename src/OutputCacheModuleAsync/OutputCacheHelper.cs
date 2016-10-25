@@ -294,7 +294,7 @@
             }
             double weight = GetAcceptableEncodingHelper(contentEncoding, acceptEncoding);
             return !(weight == 0) &&
-                   (!(weight <= 0) || GetAcceptableEncodingHelper(Asterisk, acceptEncoding) == 0);
+                   (!(weight <= 0) || GetAcceptableEncodingHelper(Asterisk, acceptEncoding) != 0);
         }
 
         public bool IsResponseCacheable() {
@@ -509,7 +509,7 @@
                     DependencyCacheTimeSpan = Cache.NoSlidingExpiration,
                     DependencyRemovedCallback = null
                 };
-                memoryCache.Add(depKey, dcew, DateTimeOffset.MaxValue);
+                memoryCache.Set(depKey, dcew, DateTimeOffset.MaxValue);
                 return false;
             }
             // file dependencies have changed
@@ -596,24 +596,22 @@
                 string depKey = OutputcacheKeyprefixDependencies + dependencies.GetUniqueID();
                 OutputCacheEntry oce = Convert(rawResponse, depKey, dependencies.GetFileDependencies());
                 await provider.SetAsync(rawResponseKey, oce, absExp);
-                {
-                    // use Add and dispose dependencies if there's already one in the cache
-                    var dce = new DependencyCacheEntry {
-                        RawResponseKey = rawResponseKey,
-                        KernelCacheUrl = oce.KernelCacheUrl,
-                        Name = provider.Name
-                    };
-                    var dcew = new DependencyCacheEntryWrapper {
-                        DependencyCacheEntry = dce,
-                        Dependencies = dependencies,
-                        CacheItemPriority = System.Web.Caching.CacheItemPriority.Normal,
-                        DependencyCacheTimeSpan = Cache.NoSlidingExpiration,
-                        DependencyRemovedCallback = null
-                    };
-                    object d = await provider.AddAsync(depKey, dcew, absExp);
-                    if (d != null) {
-                        dependencies.Dispose();
-                    }
+                // use Add and dispose dependencies if there's already one in the cache
+                var dce = new DependencyCacheEntry {
+                    RawResponseKey = rawResponseKey,
+                    KernelCacheUrl = oce.KernelCacheUrl,
+                    Name = provider.Name
+                };
+                var dcew = new DependencyCacheEntryWrapper {
+                    DependencyCacheEntry = dce,
+                    Dependencies = dependencies,
+                    CacheItemPriority = System.Web.Caching.CacheItemPriority.Normal,
+                    DependencyCacheTimeSpan = Cache.NoSlidingExpiration,
+                    DependencyRemovedCallback = null
+                };
+                object d = await provider.AddAsync(depKey, dcew, absExp);
+                if (d != null) {
+                    dependencies.Dispose();
                 }
             }
         }

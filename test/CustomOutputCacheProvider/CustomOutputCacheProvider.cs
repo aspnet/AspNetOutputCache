@@ -64,7 +64,7 @@
                 _dict.Add(key, new CustomOutputCacheItem(entry, utcExpiry));
             }
             else {
-                _dict[key] = new CustomOutputCacheItem(entry, utcExpiry);
+                entry = _dict[key].Obj;
             }
             return entry;
         }
@@ -127,7 +127,7 @@
                 _dict.Add(key, new CustomOutputCacheItem(entry, utcExpiry));
             }
             else {
-                _dict[key] = new CustomOutputCacheItem(entry, utcExpiry);
+                entry = _dict[key].Obj;
             }
             return entry;
         }

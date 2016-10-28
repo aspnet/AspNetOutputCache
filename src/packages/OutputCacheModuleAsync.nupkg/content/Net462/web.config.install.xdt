@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">
+
+  <system.webServer xdt:Transform="InsertIfMissing">
+    <modules xdt:Transform="InsertIfMissing">
+    </modules>
+  </system.webServer>   
+
+  <system.webServer>
+    <modules>
+      <remove name="OutputCache" xdt:Transform="InsertIfMissing" xdt:Locator="Match(name)" />
+      <add name="OutputCache"
+           type="Microsoft.AspNet.OutputCache.OutputCacheModuleAsync, Microsoft.AspNet.OutputCache.OutputCacheModuleAsync"
+           preCondition="integratedMode" xdt:Transform="Insert" />
+    </modules>
+  </system.webServer>
+</configuration>

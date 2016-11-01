@@ -413,7 +413,7 @@
             if (settings.SlidingExpiration) {
                 slidingDelta = settings.SlidingDelta;
             }
-            else if (settings.MaxAge != TimeSpan.MinValue) {
+            else if (settings.MaxAge != TimeSpan.Zero) {
                 DateTime utcTimestamp = (settings.UtcTimestampCreated != DateTime.MinValue)
                     ? settings.UtcTimestampCreated
                     : _context.Timestamp;

@@ -23,6 +23,7 @@
         private const string Identity = "identity";
         private const string Asterisk = "*";
         private const string OutputcacheKeyprefixDependencies = "Microsoft.AspNet.OutputCache.Dependencies";
+        private static CacheItemRemovedCallback s_dependencyRemovedCallback;
         private static MemoryCache memoryCache = new MemoryCache("Microsoft.AspNet.OutputCache.MemoryCache");
         private static InMemoryOutputCacheProvider inMemoryOutputCacheProvider = new InMemoryOutputCacheProvider();
         private HttpContext _context;
@@ -30,6 +31,7 @@
 
         public OutputCacheHelper(HttpContext httpContext) {
             _context = httpContext;
+            s_dependencyRemovedCallback = new CacheItemRemovedCallback(DependencyRemovedCallback);
         }
 
         #region public methods
@@ -298,7 +300,7 @@
         }
 
         public bool IsResponseCacheable() {
-            HttpCachePolicy cache = (HttpCachePolicy) _context.Response.Cache;
+            HttpCachePolicy cache = (HttpCachePolicy)_context.Response.Cache;
             if (!cache.IsModified()) {
                 return false;
             }
@@ -455,6 +457,16 @@
         #endregion
 
         #region private methods
+        private async void DependencyRemovedCallback(string key, object value, CacheItemRemovedReason reason) {
+            var dce = value as DependencyCacheEntry;
+            // TODO: invalidate kernel cache entry
+            if (reason == CacheItemRemovedReason.DependencyChanged) {
+                if (dce.RawResponseKey != null) {
+                    await RemoveFromProvider(dce.RawResponseKey, dce.ProviderName);
+                }
+            }
+        }
+
         private async Task RemoveFromProvider(string key, string providerName) {
             OutputCacheProviderAsync provider;
             // we know where it is.  If providerName is given,
@@ -486,10 +498,7 @@
             if (depKey == null) {
                 return false;
             }
-            // is the file dependency already in the in-memory cache?
-            if (memoryCache.Get(depKey) != null) {
-                return false;
-            }
+    
             // deserialize the file dependencies
             var dep = new CacheDependency(fileDeps);
             int idStartIndex = OutputcacheKeyprefixDependencies.Length;
@@ -500,16 +509,9 @@
                 var dce = new DependencyCacheEntry {
                     RawResponseKey = oceKey,
                     KernelCacheUrl = kernelKey,
-                    Name = providerName
+                    ProviderName = providerName
                 };
-                var dcew = new DependencyCacheEntryWrapper {
-                    DependencyCacheEntry = dce,
-                    Dependencies = dep,
-                    CacheItemPriority = System.Web.Caching.CacheItemPriority.Normal,
-                    DependencyCacheTimeSpan = Cache.NoSlidingExpiration,
-                    DependencyRemovedCallback = null
-                };
-                memoryCache.Set(depKey, dcew, DateTimeOffset.MaxValue);
+                memoryCache.Set(depKey, dce, GetCacheItemPolicy(dep));
                 return false;
             }
             // file dependencies have changed
@@ -557,8 +559,7 @@
             CacheDependency dependencies,
             DateTime absExp,
             TimeSpan slidingExpiration) {
-            // if the provider is undefined or the fragment can't be inserted in the
-            // provider, insert it in the internal cache.
+
             OutputCacheProviderAsync provider = GetProvider();
             // CachedVary can be serialized.
             // CachedRawResponse is not always serializable.
@@ -592,28 +593,42 @@
                 rawResponse.CachedVaryId = cachedVary.CachedVaryId;
             }
             // Now insert into the cache
+            string depKey = null;
             if (dependencies != null) {
-                string depKey = OutputcacheKeyprefixDependencies + dependencies.GetUniqueID();
-                OutputCacheEntry oce = Convert(rawResponse, depKey, dependencies.GetFileDependencies());
-                await provider.SetAsync(rawResponseKey, oce, absExp);
-                // use Add and dispose dependencies if there's already one in the cache
-                var dce = new DependencyCacheEntry {
-                    RawResponseKey = rawResponseKey,
-                    KernelCacheUrl = oce.KernelCacheUrl,
-                    Name = provider.Name
-                };
-                var dcew = new DependencyCacheEntryWrapper {
-                    DependencyCacheEntry = dce,
-                    Dependencies = dependencies,
-                    CacheItemPriority = System.Web.Caching.CacheItemPriority.Normal,
-                    DependencyCacheTimeSpan = Cache.NoSlidingExpiration,
-                    DependencyRemovedCallback = null
-                };
-                object d = await provider.AddAsync(depKey, dcew, absExp);
-                if (d != null) {
-                    dependencies.Dispose();
-                }
+                depKey = OutputcacheKeyprefixDependencies + dependencies.GetUniqueID();
             }
+            OutputCacheEntry oce = Convert(rawResponse, depKey, dependencies.GetFileDependencies());
+
+            await provider.SetAsync(rawResponseKey, oce, absExp);
+
+            if (dependencies != null) {
+                
+                // Check if Cache Dependency is supported
+                var cacheDepHandler = provider as ICacheDependencyHandler;
+                if (cacheDepHandler != null) {
+                    var dce = new DependencyCacheEntry {
+                        RawResponseKey = rawResponseKey,
+                        KernelCacheUrl = oce.KernelCacheUrl,
+                        ProviderName = provider.Name
+                    };
+
+                    await cacheDepHandler.AddAsync(depKey, dce, GetCacheItemPolicy(dependencies));
+                }
+
+                dependencies.Dispose();
+            }
+        }
+
+        private CacheItemPolicy GetCacheItemPolicy(CacheDependency dependency) {
+            CacheItemPolicy cacheItemPolicy = new CacheItemPolicy();
+            cacheItemPolicy.RemovedCallback = (new RemovedCallback(s_dependencyRemovedCallback)).CacheEntryRemovedCallback;
+            List<string> filePaths = new List<string>();
+            foreach (string fileDependency in dependency.GetFileDependencies()) {
+                filePaths.Add(fileDependency);
+            }
+            var fileChangeMonitor = new HostFileChangeMonitor(filePaths);
+            cacheItemPolicy.ChangeMonitors.Add(fileChangeMonitor);
+            return cacheItemPolicy;
         }
 
         private bool IsCacheableEncoding(Encoding contentEncoding, HttpCacheVaryByContentEncodings varyByContentEncodings) {
@@ -1026,12 +1041,12 @@
             if (utcExpires > DateTime.Now) {
                 // Create the response object to be sent on cache hits.
                 HttpRawResponse httpRawResponse = GetSnapshot();
-                string kernelCacheUrl = OutputCacheUtility.SetupKernelCaching(null, _context.Response);
+                //TODO insert the response into kernel Cache
                 Guid cachedVaryId = cachedVary?.CachedVaryId ?? Guid.Empty;
                 var cachedRawResponse = new CachedRawResponse {
                     RawResponse = httpRawResponse,
                     CachePolicy = settings,
-                    KernelCacheUrl = kernelCacheUrl,
+                    KernelCacheUrl = null,
                     CachedVaryId = cachedVaryId
                 };
                 using (CacheDependency dep = OutputCacheUtility.CreateCacheDependency(_context.Response)) {

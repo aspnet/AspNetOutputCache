@@ -18,14 +18,7 @@
     /// </summary>
     public class CustomOutputCacheProvider : OutputCacheProviderAsync {
 
-        private readonly Dictionary<string, CustomOutputCacheItem> _dict;
-
-        /// <summary>
-        /// Async OutputCache Provider
-        /// </summary>
-        public CustomOutputCacheProvider() {
-            _dict = new Dictionary<string, CustomOutputCacheItem>();
-        }
+        private readonly static Dictionary<string, CustomOutputCacheItem> _dict = new Dictionary<string, CustomOutputCacheItem>();
 
         private static async Task FooAsync() {
             await Task.Delay(1);

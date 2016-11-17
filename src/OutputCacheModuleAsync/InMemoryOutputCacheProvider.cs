@@ -26,6 +26,7 @@
         }
 
         public override Task SetAsync(string key, object entry, DateTime utcExpiry) {
+            DateTimeOffset expiration = (utcExpiry == Cache.NoAbsoluteExpiration) ? ObjectCache.InfiniteAbsoluteExpiration : utcExpiry;
             _cache.Set(key, entry, expiration);
             return Task.CompletedTask;
         }

@@ -5,14 +5,6 @@
     sealed class DependencyCacheEntry {
         public string RawResponseKey;
         public string KernelCacheUrl;
-        public string Name;
-    }
-
-    sealed class DependencyCacheEntryWrapper {
-        public DependencyCacheEntry DependencyCacheEntry;
-        public CacheDependency Dependencies;
-        public TimeSpan DependencyCacheTimeSpan;
-        public CacheItemPriority CacheItemPriority;
-        public CacheItemRemovedCallback DependencyRemovedCallback;
+        public string ProviderName;
     }
 }

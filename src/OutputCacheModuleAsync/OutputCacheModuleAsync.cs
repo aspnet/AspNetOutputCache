@@ -94,11 +94,7 @@
             }
             helper.UpdateCachedResponse(settings, cachedRawResponse.RawResponse);
 
-            //Re-insert entry in kernel cache if necessary
-            string originalCacheUrl = cachedRawResponse.KernelCacheUrl;
-            if (originalCacheUrl != null) {
-                OutputCacheUtility.SetupKernelCaching(originalCacheUrl, app.Context.Response);
-            }
+            //TODO Re-insert entry in kernel cache if necessary
 
             //Complete request
             app.CompleteRequest();

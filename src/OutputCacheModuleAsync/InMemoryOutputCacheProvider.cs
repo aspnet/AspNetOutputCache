@@ -4,24 +4,34 @@
     using System.Threading.Tasks;
     using System.Web.Caching;
 
-    class InMemoryOutputCacheProvider : OutputCacheProviderAsync {
-        private readonly MemoryCache _cache = new MemoryCache("Microsoft.AspNet.OutputCache Default In - Memory Provider");
-
-        public override Task<object> GetAsync(string key) {
-            return Task.FromResult(Get(key)); 
-        }
+    class InMemoryOutputCacheProvider : OutputCacheProviderAsync, ICacheDependencyHandler {
+        private readonly static MemoryCache _cache = new MemoryCache("InMemoryOutputCacheProvider");
 
         public override Task<object> AddAsync(string key, object entry, DateTime utcExpiry) {
-            return Task.FromResult(Add(key,entry,utcExpiry));
+            DateTimeOffset expiration = (utcExpiry == Cache.NoAbsoluteExpiration) ? ObjectCache.InfiniteAbsoluteExpiration : utcExpiry;
+            return Task.FromResult(_cache.AddOrGetExisting(key, entry, expiration));
         }
 
-        public override Task SetAsync(string key, object entry, DateTime utcExpiry) {
-            Set(key, entry, utcExpiry);
+        Task<object> ICacheDependencyHandler.AddAsync(string key, object entry, CacheItemPolicy cacheItemPolicy) {
+            return Task.FromResult(_cache.AddOrGetExisting(key, entry, cacheItemPolicy));
+        }
+
+        Task ICacheDependencyHandler.SetAsync(string key, object entry, CacheItemPolicy cacheItemPolicy) {
+            _cache.Set(key, entry, cacheItemPolicy);
             return Task.CompletedTask;
         }
 
-        public override Task RemoveAsync(string key) { 
-            Remove(key);
+        public override Task<object> GetAsync(string key) {
+            return Task.FromResult(_cache.Get(key));
+        }
+
+        public override Task SetAsync(string key, object entry, DateTime utcExpiry) {
+            _cache.Set(key, entry, expiration);
+            return Task.CompletedTask;
+        }
+
+        public override Task RemoveAsync(string key) {
+            _cache.Remove(key);
             return Task.CompletedTask;
         }
 

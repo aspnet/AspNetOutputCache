@@ -594,13 +594,15 @@
             }
             // Now insert into the cache
             string depKey = null;
+            OutputCacheEntry oce = null;
             if (dependencies != null) {
                 depKey = OutputcacheKeyprefixDependencies + dependencies.GetUniqueID();
+                oce = Convert(rawResponse, depKey, dependencies.GetFileDependencies());
+                await provider.SetAsync(rawResponseKey, oce, absExp);
             }
-            OutputCacheEntry oce = Convert(rawResponse, depKey, dependencies.GetFileDependencies());
-
-            await provider.SetAsync(rawResponseKey, oce, absExp);
-
+            else {
+                await provider.SetAsync(rawResponseKey, rawResponse, absExp);
+            }
             if (dependencies != null) {
                 
                 // Check if Cache Dependency is supported

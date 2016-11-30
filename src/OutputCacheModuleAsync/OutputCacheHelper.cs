@@ -142,7 +142,7 @@
                         if (index > -1) {
                             identityIsAcceptable = false;
                             // the client Accept-Encoding header contains an encoding that's in the VaryByContentEncoding list
-                            item = await GetAsync(key + contentEncodings[index]);
+                            item = await GetAsync(key);
                             if (item != null) {
                                 continue;
                             }
@@ -345,7 +345,7 @@
                 return false;
             }
             return cache.VaryByContentEncodings.GetContentEncodings() == null ||
-                   IsCacheableEncoding(_context.Response.ContentEncoding,
+                   IsCacheableEncoding(_context.Request.Headers[HttpHeaders.AcceptEncoding],
                        cache.VaryByContentEncodings);
         }
 
@@ -633,13 +633,23 @@
             return cacheItemPolicy;
         }
 
-        private bool IsCacheableEncoding(Encoding contentEncoding, HttpCacheVaryByContentEncodings varyByContentEncodings) {
+        private bool IsCacheableEncoding(string headerContentEncodings, HttpCacheVaryByContentEncodings varyByContentEncodings) {
             // return true if we are not varying by content encoding.
             if (varyByContentEncodings == null) {
                 return true;
             }
-            // return true if there is no Content-Encoding header or the Content-Encoding header is listed
-            return contentEncoding == null || varyByContentEncodings.GetContentEncodings().Any(varyByContentEncoding => varyByContentEncoding.Equals(contentEncoding.ToString(), StringComparison.OrdinalIgnoreCase));
+            // return true if there is no Content-Encoding header
+            if (headerContentEncodings == null) {
+                return true;
+            }
+            // return true if the Content-Encoding header is listed within varyByContentEncodings
+            string[] headerContentEncodingCollection = headerContentEncodings.Split(new Char[] { ',' });
+            foreach (string headerContentEncoding in headerContentEncodingCollection) {
+                if (varyByContentEncodings.GetContentEncodings().Any(varyByContentEncoding => varyByContentEncoding.Equals(headerContentEncoding, StringComparison.OrdinalIgnoreCase))) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private bool ContainsNonShareableCookies() {
@@ -948,9 +958,14 @@
             if (contentEncodings == null) {
                 return sb.ToString();
             }
-            string coding = _context.Response.HeaderEncoding.ToString();
-            if (contentEncodings.Any(t => t.Equals(coding,StringComparison.OrdinalIgnoreCase))) {
-                sb.Append(coding);
+            if (_context.Request.Headers[HttpHeaders.AcceptEncoding] != null) {
+                string[] headerContentEncodingCollection = _context.Request.Headers[HttpHeaders.AcceptEncoding].Split(new char[] { ',' });
+                foreach (string headerContentEncoding in headerContentEncodingCollection) {
+                    if (contentEncodings.Any(t => t.Equals(headerContentEncoding, StringComparison.OrdinalIgnoreCase))) {
+                        sb.Append(headerContentEncoding);
+                        break;
+                    }
+                }
             }
             // The key must end in "E", or the VaryByContentEncoding feature will break. Unfortunately, 
             // there was no good way to encapsulate the logic within this routine.  See the code in
@@ -1073,8 +1088,9 @@
                         return true;
                     }
                 }
+                return false;
             }
-            return false;
+            return true;
         }
 
         private bool CheckIfModifiedSince(HttpCachePolicySettings settings) {

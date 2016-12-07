@@ -1,151 +1,113 @@
 ﻿namespace Microsoft.AspNet.OutputCache.CustomOutputCacheProvider {
     using System;
-    using System.Collections.Generic;
+    using System.Runtime.Caching;
     using System.Threading.Tasks;
     using System.Web.Caching;
-
-    class CustomOutputCacheItem {
-        public object Obj;
-        public DateTime UtcExpiry;
-        public CustomOutputCacheItem(object entry, DateTime utcExpiryIn) {
-            Obj = entry;
-            UtcExpiry = utcExpiryIn;
-        }
-    }
 
     /// <summary>
     /// This is just a proof of concept Async OutputCache Provider. It is used for testing purpose.
     /// </summary>
     public class CustomOutputCacheProvider : OutputCacheProviderAsync {
-
-        private readonly static Dictionary<string, CustomOutputCacheItem> _dict = new Dictionary<string, CustomOutputCacheItem>();
-
-        private static async Task FooAsync() {
-            await Task.Delay(1);
-        }
-
+        private readonly static MemoryCache _cache = new MemoryCache("CustomOutputCacheProvider");
+        
         /// <summary>
-        /// Override method for the Async OutputCache Provider
-        /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        public override async Task<object> GetAsync(string key) {
-            await FooAsync();
-            if (!_dict.ContainsKey(key)) {
-                return null;
-            }
-            if (_dict[key].UtcExpiry > DateTime.Now.ToUniversalTime()) {
-                return _dict[key].Obj;
-            }
-            await RemoveAsync(key);
-            return null;
-        }
-
-        /// <summary>
-        /// Override method for the Async OutputCache Provider
+        /// Asynchronously inserts the specified entry into the output cache.
         /// </summary>
         /// <param name="key"></param>
         /// <param name="entry"></param>
         /// <param name="utcExpiry"></param>
         /// <returns></returns>
-        public override async Task<object> AddAsync(string key, object entry, DateTime utcExpiry) {
-            await FooAsync();
-            if (_dict.ContainsKey(key) && _dict[key].UtcExpiry > DateTime.Now.ToUniversalTime()) {
-                return _dict[key].Obj;
-            }
-            if (!_dict.ContainsKey(key)) {
-                _dict.Add(key, new CustomOutputCacheItem(entry, utcExpiry));
-            }
-            else {
-                entry = _dict[key].Obj;
-            }
-            return entry;
+        public override Task<object> AddAsync(string key, object entry, DateTime utcExpiry) {
+            //TODO:
+            //Replace with your own async data insertion mechanism.
+            DateTimeOffset expiration = (utcExpiry == Cache.NoAbsoluteExpiration) ? ObjectCache.InfiniteAbsoluteExpiration : utcExpiry;
+            return Task.FromResult(_cache.AddOrGetExisting(key, entry, expiration));
         }
 
         /// <summary>
-        /// Override method for the Async OutputCache Provider
+        /// Asynchronously returns a reference to the specified entry in the output cache.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public override Task<object> GetAsync(string key) {
+            //TODO:
+            //Replace with your own aysnc data retrieve mechanism.
+            return Task.FromResult(_cache.Get(key));
+        }
+
+        /// <summary>
+        /// Asynchronously Inserts the specified entry into the output cache, overwriting the entry if it is already cached.
         /// </summary>
         /// <param name="key"></param>
         /// <param name="entry"></param>
         /// <param name="utcExpiry"></param>
         /// <returns></returns>
-        public override async Task SetAsync(string key, object entry, DateTime utcExpiry) {
-            await FooAsync();
-            if (_dict.ContainsKey(key)) {
-                _dict[key] = new CustomOutputCacheItem(entry, utcExpiry);
-            }
-            else {
-                _dict.Add(key, new CustomOutputCacheItem(entry, utcExpiry));
-            }
+        public override Task SetAsync(string key, object entry, DateTime utcExpiry) {
+            //TODO:
+            //Replace with your own async insertion/overwriting mechanism.
+            DateTimeOffset expiration = (utcExpiry == Cache.NoAbsoluteExpiration) ? ObjectCache.InfiniteAbsoluteExpiration : utcExpiry;
+            _cache.Set(key, entry, expiration);
+            return Task.CompletedTask;
         }
 
         /// <summary>
-        /// Override method for the Async OutputCache Provider
+        /// Asynchronously removes the specified entry from the output cache.
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
-        public override async Task RemoveAsync(string key) {
-            await FooAsync();
-            _dict.Remove(key);
+        public override Task RemoveAsync(string key) {
+            //TODO:
+            //Replace with your own async data removal mechanism.
+            _cache.Remove(key);
+            return Task.CompletedTask;
         }
 
         /// <summary>
-        /// Override method for the Async OutputCache Provider
+        /// Returns a reference to the specified entry in the output cache.
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
         public override object Get(string key) {
-            if (!_dict.ContainsKey(key)) {
-                return null;
-            }
-            if (_dict[key].UtcExpiry > DateTime.Now.ToUniversalTime()) {
-                return _dict[key].Obj;
-            }
-            Remove(key);
-            return null;
+            //TODO:
+            //Replace with your own data retrieve mechanism.
+            return _cache.Get(key);
         }
 
         /// <summary>
-        /// Override method for the Async OutputCache Provider
+        /// Inserts the specified entry into the output cache.
         /// </summary>
         /// <param name="key"></param>
         /// <param name="entry"></param>
         /// <param name="utcExpiry"></param>
         /// <returns></returns>
         public override object Add(string key, object entry, DateTime utcExpiry) {
-            if (_dict.ContainsKey(key) && _dict[key].UtcExpiry > DateTime.Now.ToUniversalTime()) {
-                return _dict[key].Obj;
-            }
-            if (!_dict.ContainsKey(key)) {
-                _dict.Add(key, new CustomOutputCacheItem(entry, utcExpiry));
-            }
-            else {
-                entry = _dict[key].Obj;
-            }
-            return entry;
+            //TODO:
+            //Replace with your own data insertion mechanism.
+            DateTimeOffset expiration = (utcExpiry == Cache.NoAbsoluteExpiration) ? ObjectCache.InfiniteAbsoluteExpiration : utcExpiry;
+            return _cache.AddOrGetExisting(key, entry, expiration);
         }
 
         /// <summary>
-        /// Override method for the Async OutputCache Provider
+        /// Inserts the specified entry into the output cache, overwriting the entry if it is already cached
         /// </summary>
         /// <param name="key"></param>
         /// <param name="entry"></param>
         /// <param name="utcExpiry"></param>
         public override void Set(string key, object entry, DateTime utcExpiry) {
-            if (_dict.ContainsKey(key)) {
-                _dict[key] = new CustomOutputCacheItem(entry, utcExpiry);
-            }
-            else {
-                _dict.Add(key, new CustomOutputCacheItem(entry, utcExpiry));
-            }
+            //TODO:
+            //Replace with your own insertion/overwriting mechanism.
+            DateTimeOffset expiration = (utcExpiry == Cache.NoAbsoluteExpiration) ? ObjectCache.InfiniteAbsoluteExpiration : utcExpiry;
+            _cache.Set(key, entry, expiration);
         }
 
         /// <summary>
-        /// Override method for the Async OutputCache Provider
+        /// Removes the specified entry from the output cache.
         /// </summary>
         /// <param name="key"></param>
         public override void Remove(string key) {
-            _dict.Remove(key);
+            //TODO:
+            //Replace with your own data removal mechanism.
+            _cache.Remove(key);
         }
     }
 }

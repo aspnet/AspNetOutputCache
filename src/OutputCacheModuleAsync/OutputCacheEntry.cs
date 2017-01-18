@@ -3,6 +3,7 @@
     using System.Collections;
     using System.Collections.Specialized;
 
+    [Serializable]
     sealed class OutputCacheEntry {
         public Guid CachedVaryId { get; set; }
         public HttpCachePolicySettings Settings { get; set; }

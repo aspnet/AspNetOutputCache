@@ -4,6 +4,7 @@
     using System.Web;
     using System.Linq;
 
+    [Serializable]
     sealed class HttpCachePolicySettings {
         public HttpCacheability Cacheability { get; set; }
         public IEnumerable<KeyValuePair<HttpCacheValidateHandler, object>> ValidationCallbackInfo { get; set; }

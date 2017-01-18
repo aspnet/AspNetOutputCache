@@ -1,6 +1,7 @@
 ﻿namespace Microsoft.AspNet.OutputCache {
     using System;
 
+    [Serializable]
     sealed class CachedVary {
         public string[] ContentEncodings { get; set; }
         public string[] Headers { get; set; }

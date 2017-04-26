@@ -52,6 +52,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CachedVary.cs" />
+    <Compile Include="Converter.cs" />
     <Compile Include="HttpMethods.cs" />
     <Compile Include="CacheDirectives.cs" />
     <Compile Include="HttpHeaders.cs" />
@@ -62,6 +63,7 @@
     <Compile Include="HttpCachePolicySettings.cs" />
     <Compile Include="HttpRawResponse.cs" />
     <Compile Include="OutputCacheEntry.cs" />
+    <Compile Include="OutputCacheFileResponseElement.cs" />
     <Compile Include="OutputCacheHelper.cs" />
     <Compile Include="OutputCacheModuleAsync.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -1,6 +1,7 @@
 ﻿namespace Microsoft.AspNet.OutputCache {
     using System;
 
+    [Serializable]
     sealed class CachedRawResponse {
 
         public Guid CachedVaryId { get; set; }

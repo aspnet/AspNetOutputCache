@@ -12,6 +12,7 @@
     using System.IO;
     using Resource;
     using System.Runtime.Caching;
+    using System.Reflection;
 
     sealed class OutputCacheHelper {
         #region private fileds
@@ -26,6 +27,7 @@
         private static CacheItemRemovedCallback s_dependencyRemovedCallback;
         private static MemoryCache memoryCache = new MemoryCache("Microsoft.AspNet.OutputCache.MemoryCache");
         private static InMemoryOutputCacheProvider inMemoryOutputCacheProvider = new InMemoryOutputCacheProvider();
+        private static Converter converter = new Converter();
         private HttpContext _context;
         #endregion
 
@@ -205,7 +207,7 @@
                 await RemoveFromProvider(key, provider.Name);
                 return null;
             }
-            result = Convert(oce);
+            result = converter.CreateCachedRawResponse(oce);
             return result;
         }
 
@@ -454,12 +456,27 @@
             }
             ResetFromHttpCachePolicySettings(settings, _context.Timestamp);
         }
+
+        public bool IsKernelCacheAPISupported() {
+            // Check from reflection if Kernel Cache methods are supported
+            Assembly System_Web = typeof(ResponseElement).Assembly;
+            if (System_Web != null) {
+                Type OutputCacheUtilityType = System_Web.GetType("System.Web.Caching.OutputCacheUtility");
+                if (OutputCacheUtilityType != null && OutputCacheUtilityType.GetMethod("FlushKernelCache") != null) {
+                    return true;
+                }
+            }
+            return false;
+        }
         #endregion
 
         #region private methods
         private async void DependencyRemovedCallback(string key, object value, CacheItemRemovedReason reason) {
             var dce = value as DependencyCacheEntry;
-            // TODO: invalidate kernel cache entry
+            // Invalidate kernel cache entry
+            if (dce.KernelCacheUrl != null && IsKernelCacheAPISupported()) {
+                OutputCacheUtility.FlushKernelCache(dce.KernelCacheUrl);
+            }
             if (reason == CacheItemRemovedReason.DependencyChanged) {
                 if (dce.RawResponseKey != null) {
                     await RemoveFromProvider(dce.RawResponseKey, dce.ProviderName);
@@ -498,7 +515,6 @@
             if (depKey == null) {
                 return false;
             }
-    
             // deserialize the file dependencies
             var dep = new CacheDependency(fileDeps);
             int idStartIndex = OutputcacheKeyprefixDependencies.Length;
@@ -517,34 +533,6 @@
             // file dependencies have changed
             dep.Dispose();
             return true;
-        }
-
-        private OutputCacheEntry Convert(CachedRawResponse cachedRawResponse, string depKey, string[] fileDependencies) {
-            return new OutputCacheEntry() {
-                CachedVaryId = cachedRawResponse.CachedVaryId,
-                Settings = cachedRawResponse.CachePolicy,
-                KernelCacheUrl = cachedRawResponse.KernelCacheUrl,
-                DependenciesKey = depKey,
-                Dependencies = fileDependencies,
-                StatusCode = cachedRawResponse.RawResponse.StatusCode,
-                StatusDescription = cachedRawResponse.RawResponse.StatusDescription,
-                HeaderElements = cachedRawResponse.RawResponse.Headers,
-                ResponseBuffers = cachedRawResponse.RawResponse.Buffers
-            };
-        }
-
-        private CachedRawResponse Convert(OutputCacheEntry oce) {
-            return new CachedRawResponse {
-                RawResponse = new HttpRawResponse {
-                    StatusCode = oce.StatusCode,
-                    StatusDescription = oce.StatusDescription,
-                    Headers = oce.HeaderElements,
-                    Buffers = oce.ResponseBuffers != null ? oce.ResponseBuffers : new ArrayList()
-                },
-                CachePolicy = oce.Settings,
-                KernelCacheUrl = oce.KernelCacheUrl,
-                CachedVaryId = oce.CachedVaryId
-            };
         }
 
         private async Task RemoveAsync(string key) {
@@ -597,14 +585,14 @@
             OutputCacheEntry oce = null;
             if (dependencies != null) {
                 depKey = OutputcacheKeyprefixDependencies + dependencies.GetUniqueID();
-                oce = Convert(rawResponse, depKey, dependencies.GetFileDependencies());
-                await provider.SetAsync(rawResponseKey, oce, absExp);
+                oce = converter.CreateOutputCacheEntry(rawResponse, depKey, dependencies.GetFileDependencies());
             }
             else {
-                await provider.SetAsync(rawResponseKey, rawResponse, absExp);
+                oce = converter.CreateOutputCacheEntry(rawResponse, null, null);
             }
+            await provider.SetAsync(rawResponseKey, oce, absExp);
+
             if (dependencies != null) {
-                
                 // Check if Cache Dependency is supported
                 var cacheDepHandler = provider as ICacheDependencyHandler;
                 if (cacheDepHandler != null) {
@@ -613,10 +601,8 @@
                         KernelCacheUrl = oce.KernelCacheUrl,
                         ProviderName = provider.Name
                     };
-
                     await cacheDepHandler.AddAsync(depKey, dce, GetCacheItemPolicy(dependencies));
                 }
-
                 dependencies.Dispose();
             }
         }
@@ -677,7 +663,7 @@
                 response.Headers.Add(h, rawResponse.Headers[h]);
             }
             // restore content
-            OutputCacheUtility.SetContentBuffers(response, rawResponse.Buffers);
+            OutputCacheUtility.SetContentBuffers(response, (ArrayList)rawResponse.Buffers);
             response.SuppressContent = !sendBody;
         }
 
@@ -846,7 +832,7 @@
 
         private string CreateOutputCachedItemKey(string path, string verb, CachedVary cachedVary) {
             var request = _context.Request;
-            StringBuilder sb = verb.Equals(HttpMethods.POST,StringComparison.OrdinalIgnoreCase)
+            StringBuilder sb = verb.Equals(HttpMethods.POST, StringComparison.OrdinalIgnoreCase)
                 ? new StringBuilder(OutputcacheKeyprefixPost, path.Length + OutputcacheKeyprefixPost.Length)
                 : new StringBuilder(OutputcacheKeyprefixGet, path.Length + OutputcacheKeyprefixGet.Length);
             sb.Append(CultureInfo.InvariantCulture.TextInfo.ToLower(path));
@@ -879,7 +865,7 @@
                         break;
                     default:
                         sb.Append("F");
-                        if (verb.Equals(HttpMethods.POST,StringComparison.OrdinalIgnoreCase)) {
+                        if (verb.Equals(HttpMethods.POST, StringComparison.OrdinalIgnoreCase)) {
                             a = cachedVary.Params;
                             if ((a != null || cachedVary.VaryByAllParams)) {
                                 col = request.Form;
@@ -1058,12 +1044,16 @@
             if (utcExpires > DateTime.Now) {
                 // Create the response object to be sent on cache hits.
                 HttpRawResponse httpRawResponse = GetSnapshot();
-                //TODO insert the response into kernel Cache
+                string kernelCacheUrl = null;
+                //Insert the response into kernel Cache
+                if (IsKernelCacheAPISupported()) {
+                    kernelCacheUrl = OutputCacheUtility.SetupKernelCaching(null, _context.Response);
+                }
                 Guid cachedVaryId = cachedVary?.CachedVaryId ?? Guid.Empty;
                 var cachedRawResponse = new CachedRawResponse {
                     RawResponse = httpRawResponse,
                     CachePolicy = settings,
-                    KernelCacheUrl = null,
+                    KernelCacheUrl = kernelCacheUrl,
                     CachedVaryId = cachedVaryId
                 };
                 using (CacheDependency dep = OutputCacheUtility.CreateCacheDependency(_context.Response)) {

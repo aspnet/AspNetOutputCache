@@ -1,7 +1,8 @@
 ﻿namespace Microsoft.AspNet.OutputCache {
     using System;
-    using System.Collections;
+    using System.Collections.Generic;
     using System.Collections.Specialized;
+    using System.Web.Caching;
 
     [Serializable]
     sealed class OutputCacheEntry {
@@ -13,6 +14,6 @@
         public int StatusCode { get; set; }
         public string StatusDescription { get; set; }
         public NameValueCollection HeaderElements { get; set; }
-        public ArrayList ResponseBuffers { get; set; }
+        public IEnumerable<ResponseElement> ResponseBuffers { get; set; }
     }
 }

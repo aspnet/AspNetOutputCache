@@ -475,7 +475,14 @@
             var dce = value as DependencyCacheEntry;
             // Invalidate kernel cache entry
             if (dce.KernelCacheUrl != null && IsKernelCacheAPISupported()) {
-                OutputCacheUtility.FlushKernelCache(dce.KernelCacheUrl);
+                Assembly System_Web = typeof(ResponseElement).Assembly;
+                Type OutputCacheUtilityType = System_Web.GetType("System.Web.Caching.OutputCacheUtility");
+                if (OutputCacheUtilityType != null) {
+                    var flushKernelCacheMethod = OutputCacheUtilityType.GetMethod("FlushKernelCache");
+                    if (flushKernelCacheMethod != null) {
+                        flushKernelCacheMethod.Invoke(dce.KernelCacheUrl, new object[] { });
+                    }
+                }
             }
             if (reason == CacheItemRemovedReason.DependencyChanged) {
                 if (dce.RawResponseKey != null) {

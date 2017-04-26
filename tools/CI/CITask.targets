@@ -38,7 +38,7 @@
 
   <ItemGroup>
     <BinScopeTargetFiles Include="$(OutputPath)Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.dll"/>
-    <BinScopeTargetFiles Include="$(OutputPath)Microsoft.AspNet.OutputCache.SQLOutputCacheAsyncProvider.dll"/>
+    <BinScopeTargetFiles Include="$(OutputPath)Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.dll"/>
     <BinScopeTargetFiles Include="$(OutputPath)Microsoft.AspNet.OutputCache.CustomOutputCacheProvider.dll"/>
   </ItemGroup>
   
@@ -67,7 +67,7 @@
             <AuthCodeCert>10006</AuthCodeCert>
             <StrongNameCert>72</StrongNameCert>
         </CodeSign>
-        <CodeSign Include="$(OutputPath)Microsoft.AspNet.OutputCache.SQLOutputCacheAsyncProvider.dll">
+        <CodeSign Include="$(OutputPath)Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.dll">
             <AuthCodeCert>10006</AuthCodeCert>
             <StrongNameCert>72</StrongNameCert>
         </CodeSign>

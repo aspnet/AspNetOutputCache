@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.AspNet.OutputCach
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.AspNet.OutputCache.CustomOutputCacheProvider", "test\CustomOutputCacheProvider\Microsoft.AspNet.OutputCache.CustomOutputCacheProvider.csproj", "{A8F3E399-BCAF-4F3E-BC16-5CA98A779916}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider", "src\SQLOutputCacheAsyncProvider\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.csproj", "{062FD141-4E51-4943-8C69-385DDE3D2792}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider", "src\SQLAsyncOutputCacheProvider\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.csproj", "{062FD141-4E51-4943-8C69-385DDE3D2792}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

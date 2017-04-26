@@ -6,13 +6,13 @@
     <authors>Microsoft</authors>
     <owners>Microsoft</owners>
     <copyright>&#169; Microsoft Corporation. All rights reserved.</copyright>
-    <title>Microsoft ASP.NET Async SQL OutputCache Provider</title>
+    <title>Microsoft ASP.NET SQL Async OutputCache Provider</title>
     <description>Async version SQL OutputCache Provider</description>
     <summary>Async version SQL OutputCache Provider</summary>
     <language>en-US</language>
     <projectUrl>http://www.asp.net/</projectUrl>
     <licenseUrl>http://www.microsoft.com/web/webpi/eula/net_library_eula_ENU.htm</licenseUrl>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
-    <tags>ASP.NET Async SQL OutputCache Provider</tags>
+    <tags>ASP.NET SQL Async OutputCache Provider</tags>
   </metadata>
 </package>

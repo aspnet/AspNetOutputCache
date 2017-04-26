@@ -19,6 +19,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' " />
   <ItemGroup>
     <NuGetProject Include="OutputCacheModuleAsync.nupkg\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.nuproj" />
+    <NuGetProject Include="SQLOutputCacheAsyncProvider.nupkg\Microsoft.AspNet.OutputCache.SQLOutputCacheAsyncProvider.nuproj" />
     <NuGetProject Include="CustomOutputCacheProvider.nupkg\Microsoft.AspNet.OutputCache.CustomOutputCacheProvider.nuproj" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

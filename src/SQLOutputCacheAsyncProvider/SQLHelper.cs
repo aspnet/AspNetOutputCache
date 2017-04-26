@@ -1,9 +1,9 @@
 ﻿namespace Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider {
     using System;
-    using System.Data.SqlClient;
     using System.Threading.Tasks;
     using System.Collections.Specialized;
     using System.Configuration;
+    using System.Data.SqlClient;
 
     class SQLHelper {
         public ConnectionStringSettings ConnectionStringInfo { get; set; }

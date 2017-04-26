@@ -3,6 +3,7 @@
  
   <ItemGroup>
     <AssemblyProject Include="src\OutputCacheModuleAsync\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.csproj" />
+    <AssemblyProject Include="src\SQLOutputCacheAsyncProvider\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.csproj" />
     <AssemblyProject Include="test\CustomOutputCacheProvider\Microsoft.AspNet.OutputCache.CustomOutputCacheProvider.csproj" />
   </ItemGroup>
   <ItemGroup>

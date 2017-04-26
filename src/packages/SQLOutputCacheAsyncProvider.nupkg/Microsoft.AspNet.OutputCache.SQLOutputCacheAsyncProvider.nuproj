@@ -19,7 +19,7 @@
             <Source>$(OutputPath)</Source>
             <Destination>lib\Net462</Destination>
         </NuGetContent>
-        <NuGetContentProject Include="$(RepositoryRoot)\src\OutputCacheModuleAsync\$(MSBuildProjectName).csproj" Condition="'$(NuGetPackSymbols)' == 'true'" />
+        <NuGetContentProject Include="$(RepositoryRoot)\src\SQLOutputCacheAsyncProvider\$(MSBuildProjectName).csproj" Condition="'$(NuGetPackSymbols)' == 'true'" />
         <NuGetContent Include="Content\Net462\*">
             <Destination>content\Net462</Destination>
         </NuGetContent>

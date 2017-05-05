@@ -6,6 +6,9 @@
     <authors>Microsoft</authors>
     <owners>Microsoft</owners>
     <copyright>&#169; Microsoft Corporation. All rights reserved.</copyright>
+    <dependencies>
+      <dependency id="Microsoft.AspNet.OutputCache.OutputCacheModuleAsync" version="$OutputCacheModuleAsyncNuGetPackageVersion$" />
+    </dependencies>
     <title>Microsoft ASP.NET SQL Async OutputCache Provider</title>
     <description>Async version SQL OutputCache Provider</description>
     <summary>Async version SQL OutputCache Provider</summary>

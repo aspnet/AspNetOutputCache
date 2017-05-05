@@ -4,6 +4,7 @@
     using System.Collections.Specialized;
     using System.Configuration;
     using System.Data.SqlClient;
+    using System.Data;
 
     class SQLHelper {
         #region Private fields
@@ -43,15 +44,13 @@
         public SQLHelper(NameValueCollection config) {
             ConnectionStringInfo = new ConnectionStringSettings(config["connectionStringName"], ConfigurationManager.ConnectionStrings[config["connectionStringName"]].ConnectionString);
             var useInMemoryTable = false;
-            if (config[InMemoryTableConfigurationName] != null) {
-                if (bool.TryParse(config[InMemoryTableConfigurationName], out useInMemoryTable) && useInMemoryTable) {
-                    CreatTableIfNotExists(CreateInMemoryOutputCacheTableSql);
-                }
-                else {
-                    CreatTableIfNotExists(CreateOutputCacheTableSql);
-                }
-                config.Remove(InMemoryTableConfigurationName);
+            if (bool.TryParse(config[InMemoryTableConfigurationName], out useInMemoryTable) && useInMemoryTable) {
+                CreatTableIfNotExists(CreateInMemoryOutputCacheTableSql);
             }
+            else {
+                CreatTableIfNotExists(CreateOutputCacheTableSql);
+            }
+            config.Remove(InMemoryTableConfigurationName);
         }
         #endregion
 

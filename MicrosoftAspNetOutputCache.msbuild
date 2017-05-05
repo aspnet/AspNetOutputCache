@@ -40,21 +40,5 @@
     <Exec Command=".nuget\NuGet.exe restore" />
   </Target>
 
-  <!--
-    <Target Name="UnitTest">
-        <ItemGroup>
-            <TestDLLs Include="test\SystemWebProvidersUnitTest\bin\$(Configuration)\*Test.dll" />
-        </ItemGroup>
-
-        <PropertyGroup>
-            <TestSettingsFile Condition=" '$(Configuration)' == 'CodeCoverage' ">$(MsBuildProjectDirectory)\test\CodeCoverage.testsettings</TestSettingsFile>
-            <TestSettingsFile Condition=" '$(Configuration)' != 'CodeCoverage' ">$(MsBuildProjectDirectory)\unittest.testsettings</TestSettingsFile>
-        </PropertyGroup>
-
-        <Delete Files="bin\$(Configuration)-TestResults.trx" />
-        <Exec
-            Command="&quot;$(VS100COMNTOOLS)..\IDE\MSTEST.EXE&quot; /nologo /usestderr /resultsfile:&quot;bin\$(Configuration)-TestResults.trx&quot; @(TestDLLs -> '/testcontainer:&quot;%(Identity)&quot;', ' ') /testsettings:&quot;$(TestSettingsFile)&quot;" />
-    </Target>
--->
   <Import Project="tools\MicrosoftAspNetOutputCache.targets"/>
 </Project>

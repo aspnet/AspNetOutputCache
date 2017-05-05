@@ -7,11 +7,20 @@
     using System.Web.Caching;
 
     /// <summary>
-    /// Async OutputCache Provider using SQL as storage.
+    /// Async OutputCache Provider using SQL server as storage.
     /// </summary>
     public class SQLAsyncOutputCacheProvider : OutputCacheProviderAsync, ICacheDependencyHandler {
 
+        #region Private Fields
         static SQLHelper sqlUtilityHelper;
+        #endregion
+
+        #region Initialization
+        /// <summary>
+        /// Initialize the SQL Async OutputCache Provider
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="config"></param>
         public override void Initialize(string name, NameValueCollection config) {
             if (config == null) {
                 throw new ArgumentNullException("config");
@@ -22,8 +31,9 @@
             base.Initialize(name, config);
             sqlUtilityHelper = new SQLHelper(config);
         }
+        #endregion
 
-        #region async methods
+        #region Public Async Methods
         /// <summary>
         /// Asynchronously inserts the specified entry into the output cache.
         /// </summary>
@@ -65,14 +75,14 @@
         }
         #endregion
 
-        #region sync methods
+        #region Public Sync methods
         /// <summary>
         /// Returns a reference to the specified entry in the output cache.
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
         public override object Get(string key) {
-            return GetAsync(key);
+            return sqlUtilityHelper.Get(key);
         }
 
         /// <summary>
@@ -83,7 +93,7 @@
         /// <param name="utcExpiry"></param>
         /// <returns></returns>
         public override object Add(string key, object entry, DateTime utcExpiry) {
-            return AddAsync(key, entry, utcExpiry);
+            return sqlUtilityHelper.Add(key, entry, utcExpiry);
         }
 
         /// <summary>
@@ -93,7 +103,7 @@
         /// <param name="entry"></param>
         /// <param name="utcExpiry"></param>
         public override void Set(string key, object entry, DateTime utcExpiry) {
-            SetAsync(key, entry, utcExpiry);
+            sqlUtilityHelper.Set(key, entry, utcExpiry);
         }
 
         /// <summary>
@@ -101,19 +111,30 @@
         /// </summary>
         /// <param name="key"></param>
         public override void Remove(string key) {
-            RemoveAsync(key);
+            sqlUtilityHelper.Remove(key);
         }
         #endregion
 
-        #region Methods support CacheItemPolicy
-
+        #region Public Async Methods that support CacheItemPolicy as Parameter
+        /// <summary>
+        /// Async Add method that supports CacheItemPolicy as Parameter
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="entry"></param>
+        /// <param name="cacheItemPolicy"></param>
+        /// <returns></returns>
         public async Task<object> AddAsync(string key, object entry, CacheItemPolicy cacheItemPolicy) {
-            //TODO: Decide what to work on the monitors
             return await sqlUtilityHelper.AddAsync(key, entry, cacheItemPolicy.AbsoluteExpiration.DateTime);
         }
 
+        /// <summary>
+        /// Async Set method that supports CacheItemPolicy
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="entry"></param>
+        /// <param name="cacheItemPolicy"></param>
+        /// <returns></returns>
         public async Task SetAsync(string key, object entry, CacheItemPolicy cacheItemPolicy) {
-            //TODO: Decide what to work on the monitors
             await sqlUtilityHelper.SetAsync(key, entry, cacheItemPolicy.AbsoluteExpiration.DateTime);
         }
     }

@@ -480,7 +480,7 @@
                 if (OutputCacheUtilityType != null) {
                     var flushKernelCacheMethod = OutputCacheUtilityType.GetMethod("FlushKernelCache");
                     if (flushKernelCacheMethod != null) {
-                        flushKernelCacheMethod.Invoke(dce.KernelCacheUrl, new object[] { });
+                        flushKernelCacheMethod.Invoke(dce.KernelCacheUrl, new object[] {dce.KernelCacheUrl});
                     }
                 }
             }

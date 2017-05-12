@@ -5,7 +5,7 @@
       <outputCache defaultProvider="SQLAsyncOutputCacheProvider" xdt:Transform="Remove"> 
         <providers>
           <add name="SQLAsyncOutputCacheProvider" connectionStringName="DefaultConnection"
-              type="Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.SQLAsyncOutputCacheProvider, Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider"
+              type="Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.SQLAsyncOutputCacheProvider, Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35"
               xdt:Transform="Remove" xdt:Locator="Match(type)"  />
         </providers>
       </outputCache>

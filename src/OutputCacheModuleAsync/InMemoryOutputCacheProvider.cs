@@ -5,7 +5,13 @@
     using System.Web.Caching;
 
     class InMemoryOutputCacheProvider : OutputCacheProviderAsync, ICacheDependencyHandler {
-        private readonly static MemoryCache _cache = new MemoryCache("InMemoryOutputCacheProvider");
+        private static ObjectCache _cache = new MemoryCache("InMemoryOutputCacheProvider");
+
+        internal static ObjectCache InternalCache
+        {
+            get { return _cache; }
+            set { _cache = value; }
+        }
 
         public override Task<object> AddAsync(string key, object entry, DateTime utcExpiry) {
             DateTimeOffset expiration = (utcExpiry == Cache.NoAbsoluteExpiration) ? ObjectCache.InfiniteAbsoluteExpiration : utcExpiry;

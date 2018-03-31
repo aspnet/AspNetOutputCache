@@ -42,7 +42,7 @@
 
         private async Task OnEnterAsync(object source, EventArgs eventArgs) {
             var app = (HttpApplication)source;
-            var helper = new OutputCacheHelper(app.Context);
+            var helper = new OutputCacheHelper(new HttpContextWrapper(app.Context));
             if (!helper.IsHttpMethodSupported()) {
                 return;
             }
@@ -103,7 +103,7 @@
         }
 
         private async Task OnLeaveAsync(object source, EventArgs eventArgs) {
-            var helper = new OutputCacheHelper(((HttpApplication)source).Context);
+            var helper = new OutputCacheHelper(new HttpContextWrapper(((HttpApplication)source).Context));
             if (helper.IsResponseCacheable()) {
                 await helper.CacheResponseAsync();
             }

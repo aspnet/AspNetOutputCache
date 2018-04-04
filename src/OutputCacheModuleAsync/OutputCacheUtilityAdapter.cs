@@ -1,10 +1,13 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using System.Web;
-using System.Web.Caching;
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license. See the License.txt file in the project root for full license information.
 
 namespace Microsoft.AspNet.OutputCache
 {
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Web;
+    using System.Web.Caching;
+
     class OutputCacheUtilityAdapter : IOutputCacheUtility
     {
         public CacheDependency CreateCacheDependency(HttpContextBase context)

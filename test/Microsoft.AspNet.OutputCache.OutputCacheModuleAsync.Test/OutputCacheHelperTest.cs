@@ -1,14 +1,15 @@
-﻿using Moq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Collections.Specialized;
-using System.Web;
-using Xunit;
-using System.Reflection;
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license. See the License.txt file in the project root for full license information.
 
 namespace Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test {
+    using Moq;
+    using System;
+    using System.Collections.Generic;
+    using System.Collections.Specialized;
+    using System.Web;
+    using Xunit;
+    using System.Reflection;
+
     public class OutputCacheHelperTest {
         private const string AcceptEncodingHeaderName = "Accept-Encoding";
         private const string ContentEncodingHeaderName = "Content-Encoding";

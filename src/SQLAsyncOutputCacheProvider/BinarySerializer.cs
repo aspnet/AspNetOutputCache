@@ -1,6 +1,10 @@
-﻿namespace Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider {
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license. See the License.txt file in the project root for full license information.
+
+namespace Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider {
     using System.IO;
     using System.Runtime.Serialization.Formatters.Binary;
+
     static class BinarySerializer {
         public static byte[] Serialize(object data) {
             if (data == null) {

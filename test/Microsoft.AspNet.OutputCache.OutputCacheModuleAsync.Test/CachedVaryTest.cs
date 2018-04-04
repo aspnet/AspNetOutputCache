@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Xunit;
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license. See the License.txt file in the project root for full license information.
 
 namespace Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test
 {
+    using System;
+    using System.Collections.Generic;
+    using Xunit;
+
     public class CachedVaryTest
     {
         private static readonly string[] DefaultEncodings = { "gzip", "deflate" };

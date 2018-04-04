@@ -202,7 +202,7 @@ namespace Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test
             var type = SystemWebAssembly.GetType("System.Web.HttpResponseBufferElement");
             var ctor = type.GetConstructor(InternalCtorBindingFlags, null, new Type[] { typeof(byte[]), typeof(int) }, null);
 
-            return ctor.Invoke(new object[] { DefaultHttpResponseBufferElementBuffer, DefaultHttpResponseBufferElementBufferSize });
+            return ctor.Invoke(new object[] { DefaultHttpResponseBufferElementBuffer, (int)DefaultHttpResponseBufferElementBufferSize });
         }
 
         private static void VerifyMemoryResponseElement(ResponseElement element)

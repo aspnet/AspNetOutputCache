@@ -6,6 +6,7 @@ using System.Text;
 using System.Collections.Specialized;
 using System.Web;
 using Xunit;
+using System.Reflection;
 
 namespace Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test {
     public class OutputCacheHelperTest {
@@ -22,6 +23,8 @@ namespace Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test {
         private const string HttpMethods_OPTIONS = "OPTIONS";
         private const string HttpMethods_CONNECT = "CONNECT";
         private static readonly string[] DefaultEncodings = { "gzip", "deflate" };
+        private const BindingFlags InternalCtorBindingFlags = BindingFlags.Instance | BindingFlags.NonPublic;
+
 
         [Fact]
         public void IsContentEncodingAcceptable_Should_Return_True_If_ContentEncodings_Is_Not_Null() {
@@ -390,6 +393,158 @@ namespace Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test {
             Assert.Equal(expectedIndex, result);
         }
 
+        [Fact]
+        public void IsResponseCacheable_Should_Return_True_When_Cache_Not_VaryByContentEncodings() {
+            var httpResponseMoq = new Mock<HttpResponseBase>();
+            httpResponseMoq.Setup(r => r.StatusCode).Returns(200);
+            httpResponseMoq.Setup(r => r.Cookies).Returns(new HttpCookieCollection());
+            var httpRequestMoq = new Mock<HttpRequestBase>();
+            httpRequestMoq.Setup(r => r.HttpMethod).Returns(HttpMethods_GET);
+            var httpContext = CreateHttpContextBase(httpRequestMoq.Object, httpResponseMoq.Object);
+
+            var cacheUtil = CreateCacheUtility(httpContext,
+                p => p.VaryByParams.IgnoreParams = true,
+                p => p.SetCacheability(HttpCacheability.Public),
+                p => p.SetETagFromFileDependencies());
+            var ocHelper = new OutputCacheHelper(httpContext, cacheUtil);
+
+            var isCacheable = ocHelper.IsResponseCacheable();
+            Assert.True(isCacheable);
+        }
+
+        [Fact]
+        public void IsResponseCacheable_Should_Return_True_When_AcceptEncoding_Is_Cachable() {            
+            var httpRequestMoq = new Mock<HttpRequestBase>();
+            httpRequestMoq.Setup(r => r.HttpMethod).Returns(HttpMethods_GET);
+            var requestHeaders = new NameValueCollection();
+            requestHeaders[AcceptEncodingHeaderName] = "gzip";
+            httpRequestMoq.Setup(r => r.Headers).Returns(requestHeaders);
+            var httpResponseMoq = new Mock<HttpResponseBase>();
+            httpResponseMoq.Setup(r => r.StatusCode).Returns(200);
+            httpResponseMoq.Setup(r => r.Cookies).Returns(new HttpCookieCollection());
+            var httpContext = CreateHttpContextBase(httpRequestMoq.Object, httpResponseMoq.Object);
+            var cacheUtil = CreateCacheUtility(httpContext, 
+                p => p.VaryByParams.IgnoreParams = true, 
+                p => p.VaryByContentEncodings.SetContentEncodings(new string[] { "gzip" }),
+                p => p.SetCacheability(HttpCacheability.Public),
+                p => p.SetETagFromFileDependencies());
+            var ocHelper = new OutputCacheHelper(httpContext, cacheUtil);
+
+            var isCacheable = ocHelper.IsResponseCacheable();
+            Assert.True(isCacheable);
+        }
+
+        [Fact]
+        public void IsResponseCacheable_Should_Return_False_If_CachePolicy_IsModified() {
+            var httpResponseMoq = new Mock<HttpResponseBase>();
+            httpResponseMoq.Setup(r => r.StatusCode).Returns(200);
+            var httpContext = CreateHttpContextBase(null, httpResponseMoq.Object);
+            var ocHelper = new OutputCacheHelper(httpContext, CreateCacheUtility(httpContext));
+
+            var isCacheable = ocHelper.IsResponseCacheable();
+            Assert.False(isCacheable);
+        }
+
+        [Theory]
+        [InlineData(HttpMethods_PUT)]
+        [InlineData(HttpMethods_DELETE)]
+        [InlineData(HttpMethods_OPTIONS)]
+        [InlineData(HttpMethods_CONNECT)]
+        public void IsResponseCacheable_Should_Return_False_If_HttpMethod_Is_Not_Supported(string method) {
+            var httpRequestMoq = new Mock<HttpRequestBase>();
+            httpRequestMoq.Setup(r => r.HttpMethod).Returns(method);
+            var httpResponseMoq = new Mock<HttpResponseBase>();
+            httpResponseMoq.Setup(r => r.StatusCode).Returns(200);
+            var httpContext = CreateHttpContextBase(httpRequestMoq.Object, httpResponseMoq.Object);
+            var ocHelper = new OutputCacheHelper(httpContext, CreateCacheUtility(httpContext));
+
+            var isCacheable = ocHelper.IsResponseCacheable();
+            Assert.False(isCacheable);
+        }
+
+        [Fact]
+        public void IsResponseCacheable_Should_Return_False_If_ResponseStatus_Is_Not_OK() {
+            var httpResponseMoq = new Mock<HttpResponseBase>();
+            httpResponseMoq.Setup(r => r.StatusCode).Returns(500);
+            var httpContext = CreateHttpContextBase(null, httpResponseMoq.Object);
+            var ocHelper = new OutputCacheHelper(httpContext, CreateCacheUtility(httpContext));
+
+            var isCacheable = ocHelper.IsResponseCacheable();
+            Assert.False(isCacheable);
+        }
+
+        [Fact]
+        public void IsResponseCacheable_Should_Return_False_If_ResponseHeader_Has_Written() {
+            var httpRequestMoq = new Mock<HttpRequestBase>();
+            httpRequestMoq.Setup(r => r.HttpMethod).Returns(HttpMethods_GET);
+            var httpResponseMoq = new Mock<HttpResponseBase>();
+            httpResponseMoq.Setup(r => r.StatusCode).Returns(200);
+            httpResponseMoq.Setup(r => r.HeadersWritten).Returns(true);
+            var httpContext = CreateHttpContextBase(httpRequestMoq.Object, httpResponseMoq.Object);
+            var ocHelper = new OutputCacheHelper(httpContext, CreateCacheUtility(httpContext));
+
+            var isCacheable = ocHelper.IsResponseCacheable();
+            Assert.False(isCacheable);
+        }
+
+        [Theory]
+        [InlineData(HttpCacheability.NoCache)]
+        [InlineData(HttpCacheability.Private)]
+        public void IsResponseCacheable_Should_Return_False_If_Cacheability_Is_Public(HttpCacheability cacheability) {
+            var httpRequestMoq = new Mock<HttpRequestBase>();
+            httpRequestMoq.Setup(r => r.HttpMethod).Returns(HttpMethods_GET);
+            var httpResponseMoq = new Mock<HttpResponseBase>();
+            httpResponseMoq.Setup(r => r.StatusCode).Returns(200);
+            var httpContext = CreateHttpContextBase(httpRequestMoq.Object, httpResponseMoq.Object);
+            var ocHelper = new OutputCacheHelper(httpContext, 
+                CreateCacheUtility(httpContext, p => p.SetCacheability(cacheability)));
+
+            var isCacheable = ocHelper.IsResponseCacheable();
+            Assert.False(isCacheable);
+        }
+
+        [Fact]
+        public void IsResponseCacheable_Should_Return_False_If_NoServerCaching() {
+            var httpRequestMoq = new Mock<HttpRequestBase>();
+            httpRequestMoq.Setup(r => r.HttpMethod).Returns(HttpMethods_GET);
+            var httpResponseMoq = new Mock<HttpResponseBase>();
+            httpResponseMoq.Setup(r => r.StatusCode).Returns(200);
+            var httpContext = CreateHttpContextBase(httpRequestMoq.Object, httpResponseMoq.Object);
+            var ocHelper = new OutputCacheHelper(httpContext, 
+                CreateCacheUtility(httpContext, p => p.SetNoServerCaching()));
+
+            var isCacheable = ocHelper.IsResponseCacheable();
+            Assert.False(isCacheable);
+        }
+
+        [Fact]
+        public void IsResponseCacheable_Should_Return_False_If_NonShareable_Cookies_In_Response() {
+            var httpResponseMoq = new Mock<HttpResponseBase>();
+            var cookies = new HttpCookieCollection();
+            cookies.Add(new HttpCookie("test") { Shareable = false });
+            httpResponseMoq.Setup(r => r.Cookies).Returns(cookies);
+            httpResponseMoq.Setup(r => r.StatusCode).Returns(200);
+            var httpContext = CreateHttpContextBase(null, httpResponseMoq.Object);
+            var ocHelper = new OutputCacheHelper(httpContext, CreateCacheUtility(httpContext));
+
+            var isCacheable = ocHelper.IsResponseCacheable();
+            Assert.False(isCacheable);
+        }
+
+        [Fact]
+        public void IsResponseCacheable_Should_Return_False_If_Not_Have_ExpirationPolicy_Nor_ValidationPolicy() {
+            var httpResponseMoq = new Mock<HttpResponseBase>();
+            var cookies = new HttpCookieCollection();
+            httpResponseMoq.Setup(r => r.Cookies).Returns(cookies);
+            var httpContext = CreateHttpContextBase(null, httpResponseMoq.Object);
+            var ocHelper = new OutputCacheHelper(httpContext, CreateCacheUtility(httpContext));
+
+            var isCacheable = ocHelper.IsResponseCacheable();
+            Assert.False(isCacheable);
+        }
+
+        
+
         public static IEnumerable<object[]> GetAcceptableEncodingTestData => new List<object[]>
         {
             new object[] { null, 0, "",  -1},
@@ -397,10 +552,27 @@ namespace Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test {
             new object[] {null, 0, "*; q=0", -2},
             new object[] {null, 0, "identity; q=0", -2},
             new object[] {new string[] {"gzip", "deflate" }, 0, "gzip", 0},
-            new object[] {new string[] {"gzip", "deflate" }, 0, "gzip; q=0", -2},
+            new object[] {new string[] {"gzip", "deflate" }, 0, "gzip; q=0", -1},
             new object[] {new string[] {"gzip", "deflate" }, 0, "gzip; q=0.5", 0},
-            new object[] {new string[] {"gzip", "deflate" }, 1, "gzip", -2}
+            new object[] {new string[] {"gzip", "deflate" }, 1, "gzip", -1}
         };
+
+        private HttpCachePolicy CreateCachePolicy() {
+            var ctor = typeof(HttpCachePolicy).GetConstructor(InternalCtorBindingFlags, null, Type.EmptyTypes, null);
+            return (HttpCachePolicy)ctor.Invoke(null);
+        }
+
+        private IOutputCacheUtility CreateCacheUtility(HttpContextBase httpContext, params Action<HttpCachePolicy>[] setupPolicy) {
+            var policy = CreateCachePolicy();
+
+            foreach(var setup in setupPolicy) {
+                setup(policy);
+            }
+            var cacheUtilMoq = new Mock<IOutputCacheUtility>();
+            cacheUtilMoq.Setup(util => util.GetCachePolicyFromHttpContextBase(httpContext)).Returns(policy);
+
+            return cacheUtilMoq.Object;
+        }
 
         private HttpContextBase CreateHttpContextBase(NameValueCollection requestHeaders = null) {
             var requestMoq = new Mock<HttpRequestBase>();
@@ -411,9 +583,13 @@ namespace Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test {
             return httpContextMoq.Object;
         }
 
-        private HttpContextBase CreateHttpContextBase(HttpRequestBase request) {
+        private HttpContextBase CreateHttpContextBase(HttpRequestBase request, HttpResponseBase response = null) {
             var httpContextMoq = new Mock<HttpContextBase>();
             httpContextMoq.Setup(ctx => ctx.Request).Returns(request);
+
+            if(response != null) {
+                httpContextMoq.Setup(ctx => ctx.Response).Returns(response);
+            }
 
             return httpContextMoq.Object;
         }

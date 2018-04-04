@@ -23,7 +23,7 @@ namespace Microsoft.AspNet.OutputCache
 
         string GetVaryByCustomString(HttpContextBase context, string custom);
 
-        string GetOutputCacheProviderName(HttpContextBase context);
+        OutputCacheProviderAsync GetOutputCacheProvider(HttpContextBase context, string providerName);
 
         HttpContext GetContextFromHttpContextBase(HttpContextBase context);
 

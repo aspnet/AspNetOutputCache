@@ -60,15 +60,27 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BinarySerializer.cs" />
+    <Compile Include="ISqlOutputCacheRepository.cs" />
+    <Compile Include="Resource\SR.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>SR.resx</DependentUpon>
+    </Compile>
     <Compile Include="SQLAsyncOutputCacheProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SQLHelper.cs" />
+    <Compile Include="SqlOutputCacheRepository.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\OutputCacheModuleAsync\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.csproj">
       <Project>{3b446e33-7b1c-4a32-aeb8-92dc6ce94f77}</Project>
       <Name>Microsoft.AspNet.OutputCache.OutputCacheModuleAsync</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resource\SR.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>SR.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

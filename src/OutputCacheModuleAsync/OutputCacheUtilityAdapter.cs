@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Web;
 using System.Web.Caching;
 
@@ -31,9 +27,17 @@ namespace Microsoft.AspNet.OutputCache
             return context.ApplicationInstance.Context;
         }
 
-        public string GetOutputCacheProviderName(HttpContextBase context)
+        public OutputCacheProviderAsync GetOutputCacheProvider(HttpContextBase context, string providerName)
         {
-            return context.ApplicationInstance.GetOutputCacheProviderName(context.ApplicationInstance.Context);
+            if (string.IsNullOrEmpty(providerName)) {
+                providerName = context.ApplicationInstance.GetOutputCacheProviderName(context.ApplicationInstance.Context);
+            }
+            
+            if (System.Web.Caching.OutputCache.Providers != null) {
+                return System.Web.Caching.OutputCache.Providers[providerName] as OutputCacheProviderAsync;
+            }
+
+            return null;
         }
 
         public IEnumerable<KeyValuePair<HttpCacheValidateHandler, object>> GetValidationCallbacks(HttpContextBase context)

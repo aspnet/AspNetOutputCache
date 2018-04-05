@@ -4,29 +4,32 @@
   <ItemGroup>
     <AssemblyProject Include="src\OutputCacheModuleAsync\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.csproj" />
     <AssemblyProject Include="src\SQLAsyncOutputCacheProvider\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.csproj" />
-    <AssemblyProject Include="test\CustomOutputCacheProvider\Microsoft.AspNet.OutputCache.CustomOutputCacheProvider.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <TestProject Include="test\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.Test\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.Test.csproj" />
+    <TestProject Include="test\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageProject Include="src\Packages\Packages.csproj" />
   </ItemGroup>
   
-  <Target Name="Build" DependsOnTargets="BuildAssemblies;BuildPackages" />
+  <Target Name="Build" DependsOnTargets="BuildAssemblies;UnitTest;BuildPackages" />
   <Target Name="Clean" DependsOnTargets="CleanPackages;CleanAssemblies" />
   <Target Name="Rebuild" DependsOnTargets="Clean;Build" />
   
   <Target Name="BuildAssemblies" DependsOnTargets="RestorePackages">
-    <MSBuild Targets="Build" Projects="@(AssemblyProject)" />
+    <MSBuild Targets="Build" Projects="@(AssemblyProject);@(TestProject)" />
   </Target> 
 
   <Target Name="CleanAssemblies">
-    <MSBuild Targets="Clean" Projects="Microsoft.Aspnet.OutputCache.sln" />
+    <MSBuild Targets="Clean" Projects="Microsoft.AspNet.OutputCache.sln" />
   </Target>
 
   <Target Name="RebuildAssemblies" DependsOnTargets="Clean;Build" />
 
   <!-- Packages build -->
 
-   <Target Name="BuildPackages" DependsOnTargets="RestorePackages">
+  <Target Name="BuildPackages" DependsOnTargets="RestorePackages">
     <MSBuild Targets="" Projects="@(PackageProject)" />
   </Target>
 
@@ -38,6 +41,10 @@
 
   <Target Name="RestorePackages">
     <Exec Command=".nuget\NuGet.exe restore" />
+  </Target>
+  
+  <Target Name="UnitTest">
+    <MSBuild Targets="XunitTest" Projects="@(TestProject)" />
   </Target>
 
   <Import Project="tools\MicrosoftAspNetOutputCache.targets"/>

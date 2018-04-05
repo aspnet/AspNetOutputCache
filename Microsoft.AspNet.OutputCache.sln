@@ -1,13 +1,19 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2036
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.AspNet.OutputCache.OutputCacheModuleAsync", "src\OutputCacheModuleAsync\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.csproj", "{3B446E33-7B1C-4A32-AEB8-92DC6CE94F77}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.AspNet.OutputCache.CustomOutputCacheProvider", "test\CustomOutputCacheProvider\Microsoft.AspNet.OutputCache.CustomOutputCacheProvider.csproj", "{A8F3E399-BCAF-4F3E-BC16-5CA98A779916}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider", "src\SQLAsyncOutputCacheProvider\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.csproj", "{062FD141-4E51-4943-8C69-385DDE3D2792}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{D256C480-BB19-4239-AD53-DF634A794F41}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{BCF9496E-D71E-4F4A-814B-B37830A87FF3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test", "test\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test.csproj", "{89636B89-D392-47CA-9D81-BEB4C5252D75}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.Test", "test\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.Test\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.Test.csproj", "{B2C127BD-077B-4B9A-8163-F77DF76CE6A8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -19,16 +25,29 @@ Global
 		{3B446E33-7B1C-4A32-AEB8-92DC6CE94F77}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3B446E33-7B1C-4A32-AEB8-92DC6CE94F77}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3B446E33-7B1C-4A32-AEB8-92DC6CE94F77}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A8F3E399-BCAF-4F3E-BC16-5CA98A779916}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A8F3E399-BCAF-4F3E-BC16-5CA98A779916}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A8F3E399-BCAF-4F3E-BC16-5CA98A779916}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A8F3E399-BCAF-4F3E-BC16-5CA98A779916}.Release|Any CPU.Build.0 = Release|Any CPU
 		{062FD141-4E51-4943-8C69-385DDE3D2792}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{062FD141-4E51-4943-8C69-385DDE3D2792}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{062FD141-4E51-4943-8C69-385DDE3D2792}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{062FD141-4E51-4943-8C69-385DDE3D2792}.Release|Any CPU.Build.0 = Release|Any CPU
+		{89636B89-D392-47CA-9D81-BEB4C5252D75}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{89636B89-D392-47CA-9D81-BEB4C5252D75}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{89636B89-D392-47CA-9D81-BEB4C5252D75}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{89636B89-D392-47CA-9D81-BEB4C5252D75}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2C127BD-077B-4B9A-8163-F77DF76CE6A8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2C127BD-077B-4B9A-8163-F77DF76CE6A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2C127BD-077B-4B9A-8163-F77DF76CE6A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2C127BD-077B-4B9A-8163-F77DF76CE6A8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{3B446E33-7B1C-4A32-AEB8-92DC6CE94F77} = {D256C480-BB19-4239-AD53-DF634A794F41}
+		{062FD141-4E51-4943-8C69-385DDE3D2792} = {D256C480-BB19-4239-AD53-DF634A794F41}
+		{89636B89-D392-47CA-9D81-BEB4C5252D75} = {BCF9496E-D71E-4F4A-814B-B37830A87FF3}
+		{B2C127BD-077B-4B9A-8163-F77DF76CE6A8} = {BCF9496E-D71E-4F4A-814B-B37830A87FF3}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {51897B01-673A-47FD-87BC-8FD7C01950E6}
 	EndGlobalSection
 EndGlobal

@@ -1,11 +1,20 @@
-﻿namespace Microsoft.AspNet.OutputCache {
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license. See the License.txt file in the project root for full license information.
+
+namespace Microsoft.AspNet.OutputCache {
     using System;
     using System.Runtime.Caching;
     using System.Threading.Tasks;
     using System.Web.Caching;
 
     class InMemoryOutputCacheProvider : OutputCacheProviderAsync, ICacheDependencyHandler {
-        private readonly static MemoryCache _cache = new MemoryCache("InMemoryOutputCacheProvider");
+        private static ObjectCache _cache = new MemoryCache("InMemoryOutputCacheProvider");
+
+        internal static ObjectCache InternalCache
+        {
+            get { return _cache; }
+            set { _cache = value; }
+        }
 
         public override Task<object> AddAsync(string key, object entry, DateTime utcExpiry) {
             DateTimeOffset expiration = (utcExpiry == Cache.NoAbsoluteExpiration) ? ObjectCache.InfiniteAbsoluteExpiration : utcExpiry;

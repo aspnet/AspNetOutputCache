@@ -1,4 +1,7 @@
-﻿namespace Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider {
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license. See the License.txt file in the project root for full license information.
+
+namespace Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider {
     using OutputCache;
     using System;
     using System.Collections.Specialized;
@@ -12,7 +15,7 @@
     public class SQLAsyncOutputCacheProvider : OutputCacheProviderAsync, ICacheDependencyHandler {
 
         #region Private Fields
-        static SQLHelper sqlUtilityHelper;
+        static ISqlOutputCacheRepository sqlRepository;
         #endregion
 
         #region Initialization
@@ -28,8 +31,14 @@
             if (String.IsNullOrEmpty(name)) {
                 name = "SqlAsyncOutputCacheProvider";
             }
+
+            Initialize(name, config, new SqlOutputCacheRepository(config));
+        }
+
+        internal void Initialize(string name, NameValueCollection config, ISqlOutputCacheRepository repository) {
+            sqlRepository = repository;
+
             base.Initialize(name, config);
-            sqlUtilityHelper = new SQLHelper(config);
         }
         #endregion
 
@@ -42,7 +51,7 @@
         /// <param name="utcExpiry"></param>
         /// <returns></returns>
         public override async Task<object> AddAsync(string key, object entry, DateTime utcExpiry) {
-            return await sqlUtilityHelper.AddAsync(key, entry, utcExpiry);
+            return await sqlRepository.AddAsync(key, entry, utcExpiry);
         }
 
         /// <summary>
@@ -51,7 +60,7 @@
         /// <param name="key"></param>
         /// <returns></returns>
         public override async Task<object> GetAsync(string key) {
-            return await sqlUtilityHelper.GetAsync(key);
+            return await sqlRepository.GetAsync(key);
         }
 
         /// <summary>
@@ -62,7 +71,7 @@
         /// <param name="utcExpiry"></param>
         /// <returns></returns>
         public override async Task SetAsync(string key, object entry, DateTime utcExpiry) {
-            await sqlUtilityHelper.SetAsync(key, entry, utcExpiry);
+            await sqlRepository.SetAsync(key, entry, utcExpiry);
         }
 
         /// <summary>
@@ -71,7 +80,7 @@
         /// <param name="key"></param>
         /// <returns></returns>
         public override async Task RemoveAsync(string key) {
-            await sqlUtilityHelper.RemoveAsync(key);
+            await sqlRepository.RemoveAsync(key);
         }
         #endregion
 
@@ -82,7 +91,7 @@
         /// <param name="key"></param>
         /// <returns></returns>
         public override object Get(string key) {
-            return sqlUtilityHelper.Get(key);
+            return sqlRepository.Get(key);
         }
 
         /// <summary>
@@ -93,7 +102,7 @@
         /// <param name="utcExpiry"></param>
         /// <returns></returns>
         public override object Add(string key, object entry, DateTime utcExpiry) {
-            return sqlUtilityHelper.Add(key, entry, utcExpiry);
+            return sqlRepository.Add(key, entry, utcExpiry);
         }
 
         /// <summary>
@@ -103,7 +112,7 @@
         /// <param name="entry"></param>
         /// <param name="utcExpiry"></param>
         public override void Set(string key, object entry, DateTime utcExpiry) {
-            sqlUtilityHelper.Set(key, entry, utcExpiry);
+            sqlRepository.Set(key, entry, utcExpiry);
         }
 
         /// <summary>
@@ -111,7 +120,7 @@
         /// </summary>
         /// <param name="key"></param>
         public override void Remove(string key) {
-            sqlUtilityHelper.Remove(key);
+            sqlRepository.Remove(key);
         }
         #endregion
 
@@ -124,7 +133,7 @@
         /// <param name="cacheItemPolicy"></param>
         /// <returns></returns>
         public async Task<object> AddAsync(string key, object entry, CacheItemPolicy cacheItemPolicy) {
-            return await sqlUtilityHelper.AddAsync(key, entry, cacheItemPolicy.AbsoluteExpiration.DateTime);
+            return await sqlRepository.AddAsync(key, entry, cacheItemPolicy.AbsoluteExpiration.DateTime);
         }
 
         /// <summary>
@@ -135,7 +144,7 @@
         /// <param name="cacheItemPolicy"></param>
         /// <returns></returns>
         public async Task SetAsync(string key, object entry, CacheItemPolicy cacheItemPolicy) {
-            await sqlUtilityHelper.SetAsync(key, entry, cacheItemPolicy.AbsoluteExpiration.DateTime);
+            await sqlRepository.SetAsync(key, entry, cacheItemPolicy.AbsoluteExpiration.DateTime);
         }
     }
     #endregion

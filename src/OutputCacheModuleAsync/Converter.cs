@@ -1,4 +1,7 @@
-﻿namespace Microsoft.AspNet.OutputCache {
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license. See the License.txt file in the project root for full license information.
+
+namespace Microsoft.AspNet.OutputCache {
     using System;
     using System.Collections;
     using System.Collections.Generic;
@@ -49,7 +52,7 @@
             IHttpResponseElement_GetSize = IHttpResponseElementType.GetMethod("GetSize");
 
             // Fileds
-            HttpFileResponseElement_FileName = HttpFileResponseElementType.GetField("_filename", BindingFlags.Instance);
+            HttpFileResponseElement_FileName = HttpFileResponseElementType.GetField("_filename", bindingFlags);
             HttpFileResponseElement_Offset = HttpFileResponseElementType.GetField("_offset", bindingFlags);
             HttpFileResponseElement_IsImpersonating = HttpFileResponseElementType.GetField("_isImpersonating", bindingFlags);
             HttpFileResponseElement_UseTransmitFile = HttpFileResponseElementType.GetField("_useTransmitFile", bindingFlags);
@@ -102,11 +105,11 @@
             foreach (var re in oce.ResponseBuffers) {
                 // convert the public ResponseElement classes back to IHttpResponseElement internal classes
                 object elem = null;
-                if (re is FileResponseElement) {
-                    elem = CreateHttpFileResponseElement((MemoryResponseElement)re);
+                if (re is OutputCacheFileResponseElement) {
+                    elem = CreateHttpFileResponseElement((OutputCacheFileResponseElement)re);
                 }
                 else if (re is SubstitutionResponseElement) {
-                    elem = CreateHttpSubstBlockResponseElement((MemoryResponseElement)re);
+                    elem = CreateHttpSubstBlockResponseElement((SubstitutionResponseElement)re);
                 }
                 else if (re is MemoryResponseElement) {
                     elem = CreateHttpResponseBufferElement((MemoryResponseElement)re);
@@ -146,9 +149,7 @@
             return new MemoryResponseElement(b, length);
         }
 
-        private object CreateHttpFileResponseElement(ResponseElement e) {
-            var fre = (OutputCacheFileResponseElement)e;
-
+        private object CreateHttpFileResponseElement(OutputCacheFileResponseElement fre) {
             //[Lan] how about we extend FileResponseElement class to store those two bool value
             //      HttpContext context = HttpContext.Current;
             //      HttpWorkerRequest wr = (context != null) ? context.WorkerRequest : null;
@@ -162,8 +163,7 @@
             return HttpFileResponseElement_Ctor.Invoke(new object[] { fre.Path, fre.Offset, fre.Length, fre.IsImpersonating, fre.SupportsLongTransmitFile });
         }
 
-        private object CreateHttpSubstBlockResponseElement(ResponseElement e) {
-            var sre = (SubstitutionResponseElement)e;
+        private object CreateHttpSubstBlockResponseElement(SubstitutionResponseElement sre) {            
             return HttpSubstBlockResponseElement_Ctor.Invoke(new object[] { sre.Callback });
         }
 

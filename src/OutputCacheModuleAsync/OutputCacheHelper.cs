@@ -1,4 +1,7 @@
-﻿namespace Microsoft.AspNet.OutputCache {
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license. See the License.txt file in the project root for full license information.
+
+namespace Microsoft.AspNet.OutputCache {
     using System.Collections.Generic;
     using System.Linq;
     using System;
@@ -12,7 +15,6 @@
     using System.IO;
     using Resource;
     using System.Runtime.Caching;
-    using System.Reflection;
 
     sealed class OutputCacheHelper {
         #region private fileds
@@ -28,12 +30,19 @@
         private static MemoryCache memoryCache = new MemoryCache("Microsoft.AspNet.OutputCache.MemoryCache");
         private static InMemoryOutputCacheProvider inMemoryOutputCacheProvider = new InMemoryOutputCacheProvider();
         private static Converter converter = new Converter();
-        private HttpContext _context;
+        private HttpContextBase _context;
+        private IOutputCacheUtility _cacheUtility;
         #endregion
 
-        public OutputCacheHelper(HttpContext httpContext) {
+        public OutputCacheHelper(HttpContextBase httpContext) : this(httpContext, new OutputCacheUtilityAdapter())
+        {
+        }
+
+        internal OutputCacheHelper(HttpContextBase httpContext, IOutputCacheUtility cacheUtil)
+        {
             _context = httpContext;
             s_dependencyRemovedCallback = new CacheItemRemovedCallback(DependencyRemovedCallback);
+            _cacheUtility = cacheUtil;
         }
 
         #region public methods
@@ -42,25 +51,25 @@
             if (cachedVary?.ContentEncodings != null) {
                 return true;
             }
-            string acceptEncoding = _context.Request.Headers[HttpHeaders.AcceptEncoding];
-            NameValueCollection headers = rawResponse.Headers;
+            var acceptEncoding = _context.Request.Headers[HttpHeaders.AcceptEncoding];
+            var headers = rawResponse.Headers;
             if (headers == null) {
                 return IsAcceptableEncoding(null, acceptEncoding);
             }
-            string contentEncoding = headers.Cast<string>().FirstOrDefault(h => h.Equals(HttpHeaders.ContentEncoding, StringComparison.OrdinalIgnoreCase));
+            var contentEncoding = headers.Cast<string>().FirstOrDefault(h => h.Equals(HttpHeaders.ContentEncoding, StringComparison.OrdinalIgnoreCase));
             return IsAcceptableEncoding(contentEncoding, acceptEncoding);
         }
 
         public bool CheckHeaders(HttpCachePolicySettings settings) {
             if (!settings.HasValidationPolicy()) {
                 if (_context.Request.Headers[HttpHeaders.CacheControl] != null) {
-                    string[] cacheDirectives = _context.Request.Headers[HttpHeaders.CacheControl].Split(s_fieldSeparators);
+                    var cacheDirectives = _context.Request.Headers[HttpHeaders.CacheControl].Split(s_fieldSeparators);
                     foreach (string directive in cacheDirectives) {
-                        if (checkMaxAge(directive, settings))
+                        if (CheckMaxAge(directive, settings))
                             return true;
                     }
                 }
-                string pragma = _context.Request.Headers[HttpHeaders.Pragma];
+                var pragma = _context.Request.Headers[HttpHeaders.Pragma];
                 if (pragma == null) {
                     return false;
                 }
@@ -80,9 +89,9 @@
             * Check if the item is still valid.
             */
             var validationStatus = HttpValidationStatus.Valid;
-            HttpValidationStatus validationStatusFinal = validationStatus;
+            var validationStatusFinal = validationStatus;
             foreach (KeyValuePair<HttpCacheValidateHandler, object> vci in settings.ValidationCallbackInfo) {
-                vci.Key(_context.ApplicationInstance.Context, vci.Value, ref validationStatus);
+                vci.Key(_cacheUtility.GetContextFromHttpContextBase(_context), vci.Value, ref validationStatus);
                 switch (validationStatus) {
                     case HttpValidationStatus.Invalid:
                         await RemoveAsync(key);
@@ -122,7 +131,7 @@
                  *
                  * Skip this step if it's a VaryByNone vary policy.
                  */
-            string key = CreateOutputCachedItemKey(cachedVary);
+            var key = CreateOutputCachedItemKey(cachedVary);
             if (key == null) {
                 return null;
             }
@@ -132,15 +141,16 @@
                 item = await GetAsync(key);
             }
             else {
-                bool identityIsAcceptable = true;
-                string acceptEncoding = _context.Request.Headers[HttpHeaders.AcceptEncoding];
+                var identityIsAcceptable = true;
+                var acceptEncoding = _context.Request.Headers[HttpHeaders.AcceptEncoding];
                 if (acceptEncoding != null) {
-                    string[] contentEncodings = cachedVary.ContentEncodings;
-                    int startIndex = 0;
-                    bool done = false;
+                    var contentEncodings = cachedVary.ContentEncodings;
+                    var startIndex = 0;
+                    var done = false;
+
                     while (!done) {
                         done = true;
-                        int index = GetAcceptableEncoding(contentEncodings, startIndex, acceptEncoding);
+                        var index = GetAcceptableEncoding(contentEncodings, startIndex, acceptEncoding);
                         if (index > -1) {
                             identityIsAcceptable = false;
                             // the client Accept-Encoding header contains an encoding that's in the VaryByContentEncoding list
@@ -193,13 +203,17 @@
         public bool IsRangeRequest() {
             // Don't record this if as a cache miss. The response for a range request is not cached, and so
             // we don't want to pollute the cache hit/miss ratio.
+            if(_context.Request.Headers[HttpHeaders.Range] == null) {
+                return false;
+            }
             return _context.Request.Headers[HttpHeaders.Range].StartsWith("bytes", StringComparison.OrdinalIgnoreCase);
         }
 
         public async Task<object> GetAsync(string key) {
-            OutputCacheProviderAsync provider = GetProvider();
-            object result = await provider.GetAsync(key);
+            var provider = GetProvider();
+            var result = await provider.GetAsync(key);
             var oce = result as OutputCacheEntry;
+
             if (oce == null) {
                 return result;
             }
@@ -232,20 +246,21 @@
             }
 
             // is there only one token?
-            int tokenEnd = acceptEncoding.IndexOf(',');
+            var tokenEnd = acceptEncoding.IndexOf(',');
             if (tokenEnd == -1) {
-                string acceptEncodingWithoutWeight = acceptEncoding;
+                var acceptEncodingWithoutWeight = acceptEncoding;
                 tokenEnd = acceptEncoding.IndexOf(';');
+
                 if (tokenEnd > -1) {
                     // remove weight
-                    int space = acceptEncoding.IndexOf(' ');
+                    var space = acceptEncoding.IndexOf(' ');
                     if (space > -1 && space < tokenEnd) {
                         tokenEnd = space;
                     }
                     acceptEncodingWithoutWeight = acceptEncoding.Substring(0, tokenEnd);
                     if (ParseWeight(acceptEncoding, tokenEnd) == 0) {
                         //weight is 0, use "identity" only if it is acceptable
-                        bool identityIsAcceptable = !acceptEncodingWithoutWeight.Equals(Identity, StringComparison.OrdinalIgnoreCase) &&
+                        var identityIsAcceptable = !acceptEncodingWithoutWeight.Equals(Identity, StringComparison.OrdinalIgnoreCase) &&
                                                     acceptEncodingWithoutWeight != Asterisk;
                         return (identityIsAcceptable) ? -1 : -2;
                     }
@@ -254,7 +269,7 @@
                     // just return the index of the first entry in the list, since it is acceptable
                     return 0;
                 }
-                for (int i = startIndex; i < contentEncodings.Length; i++) {
+                for (var i = startIndex; i < contentEncodings.Length; i++) {
                     if (string.Equals(contentEncodings[i], acceptEncodingWithoutWeight,
                         StringComparison.OrdinalIgnoreCase)) {
                         return i; // found
@@ -263,12 +278,12 @@
                 return -1; // not found, use "identity"
             }
             // there are multiple tokens
-            int bestCodingIndex = -1;
-            double bestCodingWeight = 0;
-            for (int i = startIndex; i < contentEncodings.Length; i++) {
-                string coding = contentEncodings[i];
+            var bestCodingIndex = -1;
+            var bestCodingWeight = 0d;
+            for (var i = startIndex; i < contentEncodings.Length; i++) {
+                var coding = contentEncodings[i];
                 // get weight of current coding
-                double weight = GetAcceptableEncodingHelper(coding, acceptEncoding);
+                var weight = GetAcceptableEncodingHelper(coding, acceptEncoding);
                 // if it is 1, use it
                 if (weight == 1) {
                     return i;
@@ -280,7 +295,7 @@
                 bestCodingIndex = i;
                 bestCodingWeight = weight;
             }
-            // WOS 1985352: use "identity" only if it is acceptable
+            // use "identity" only if it is acceptable
             if (bestCodingIndex == -1 && !IsIdentityAcceptable(acceptEncoding)) {
                 bestCodingIndex = -2;
             }
@@ -296,13 +311,13 @@
                 // only the identity is acceptable if Accept-Encoding is not set
                 return (contentEncoding.Equals(Identity, StringComparison.OrdinalIgnoreCase));
             }
-            double weight = GetAcceptableEncodingHelper(contentEncoding, acceptEncoding);
+            var weight = GetAcceptableEncodingHelper(contentEncoding, acceptEncoding);
             return !(weight == 0) &&
                    (!(weight <= 0) || GetAcceptableEncodingHelper(Asterisk, acceptEncoding) != 0);
         }
 
         public bool IsResponseCacheable() {
-            HttpCachePolicy cache = (HttpCachePolicy)_context.Response.Cache;
+            var cache = _cacheUtility.GetCachePolicyFromHttpContextBase(_context);
             if (!cache.IsModified()) {
                 return false;
             }
@@ -328,11 +343,11 @@
             if (ContainsNonShareableCookies()) {
                 return false;
             }
-            bool hasExpirationPolicy = !cache.HasSlidingExpiration() &&
+            var hasExpirationPolicy = !cache.HasSlidingExpiration() &&
                                        (cache.GetExpires() != DateTime.MinValue || cache.GetMaxAge() != TimeSpan.Zero);
-            bool hasValidationPolicy = cache.GetLastModifiedFromFileDependencies() ||
+            var hasValidationPolicy = cache.GetLastModifiedFromFileDependencies() ||
                                        cache.GetETagFromFileDependencies() ||
-                                       OutputCacheUtility.GetValidationCallbacks(_context.Response).Any() ||
+                                       _cacheUtility.GetValidationCallbacks(_context).Any() ||
                                        (cache.IsValidUntilExpires() && !cache.HasSlidingExpiration());
             if (!hasExpirationPolicy && !hasValidationPolicy) {
                 return false;
@@ -340,10 +355,12 @@
             if (cache.VaryByHeaders[Asterisk]) {
                 return false;
             }
-            bool acceptParams = (cache.VaryByParams.IgnoreParams ||
+            var acceptParams = (cache.VaryByParams.IgnoreParams ||
                                  (Equals(cache.VaryByParams.GetParams(), new[] { Asterisk })) ||
                                  (cache.VaryByParams.GetParams() != null && cache.VaryByParams.GetParams().Any()));
-            if (!acceptParams && (_context.Request.HttpMethod.Equals(HttpMethods.POST, StringComparison.OrdinalIgnoreCase) || (_context.Request.QueryString.Count > 0))) {
+            if (!acceptParams && 
+                (_context.Request.HttpMethod.Equals(HttpMethods.POST, StringComparison.OrdinalIgnoreCase) || 
+                    (_context.Request.QueryString.Count > 0))) {
                 return false;
             }
             return cache.VaryByContentEncodings.GetContentEncodings() == null ||
@@ -357,11 +374,11 @@
             /* Add response to cache.*/
             UpdateCachedHeaders();
             //look at response cachepolicy and decide if to cache it
-            HttpCachePolicySettings settings = GetCurrentSettings();
-            string[] varyByHeaders = settings.VaryByHeaders;
-            string[] varyByParams = settings.IgnoreParams ? null : settings.VaryByParams;
+            var settings = GetCurrentSettings();
+            var varyByHeaders = settings.VaryByHeaders;
+            var varyByParams = settings.IgnoreParams ? null : settings.VaryByParams;
             /* Create the key if it was not created in OnEnter */
-            string key = CreateOutputCachedItemKey(null);
+            var key = CreateOutputCachedItemKey(null);
 
             if (settings.VaryByContentEncodings == null && varyByHeaders == null && varyByParams == null &&
                 settings.VaryByCustom == null) {
@@ -383,7 +400,7 @@
                             varyByHeaders[i].Replace('-', '_'));
                     }
                 }
-                bool varyByAllParams = false;
+                var varyByAllParams = false;
                 if (varyByParams != null) {
                     varyByAllParams = (varyByParams.Length == 1 && varyByParams[0] == Asterisk);
                     if (varyByAllParams) {
@@ -412,13 +429,13 @@
                     return;
                 }
             }
-            DateTime utcExpires = Cache.NoAbsoluteExpiration;
-            TimeSpan slidingDelta = Cache.NoSlidingExpiration;
+            var utcExpires = Cache.NoAbsoluteExpiration;
+            var slidingDelta = Cache.NoSlidingExpiration;
             if (settings.SlidingExpiration) {
                 slidingDelta = settings.SlidingDelta;
             }
             else if (settings.MaxAge != TimeSpan.Zero) {
-                DateTime utcTimestamp = (settings.UtcTimestampCreated != DateTime.MinValue)
+                var utcTimestamp = (settings.UtcTimestampCreated != DateTime.MinValue)
                     ? settings.UtcTimestampCreated
                     : _context.Timestamp;
                 utcExpires = utcTimestamp + settings.MaxAge;
@@ -459,9 +476,9 @@
 
         public bool IsKernelCacheAPISupported() {
             // Check from reflection if Kernel Cache methods are supported
-            Assembly System_Web = typeof(ResponseElement).Assembly;
+            var System_Web = typeof(ResponseElement).Assembly;
             if (System_Web != null) {
-                Type OutputCacheUtilityType = System_Web.GetType("System.Web.Caching.OutputCacheUtility");
+                var OutputCacheUtilityType = System_Web.GetType("System.Web.Caching.OutputCacheUtility");
                 if (OutputCacheUtilityType != null && OutputCacheUtilityType.GetMethod("FlushKernelCache") != null) {
                     return true;
                 }
@@ -475,8 +492,9 @@
             var dce = value as DependencyCacheEntry;
             // Invalidate kernel cache entry
             if (dce.KernelCacheUrl != null && IsKernelCacheAPISupported()) {
-                Assembly System_Web = typeof(ResponseElement).Assembly;
-                Type OutputCacheUtilityType = System_Web.GetType("System.Web.Caching.OutputCacheUtility");
+                var System_Web = typeof(ResponseElement).Assembly;
+                var OutputCacheUtilityType = System_Web.GetType("System.Web.Caching.OutputCacheUtility");
+                
                 if (OutputCacheUtilityType != null) {
                     var flushKernelCacheMethod = OutputCacheUtilityType.GetMethod("FlushKernelCache");
                     if (flushKernelCacheMethod != null) {
@@ -492,28 +510,14 @@
         }
 
         private async Task RemoveFromProvider(string key, string providerName) {
-            OutputCacheProviderAsync provider;
-            // we know where it is.  If providerName is given,
-            // then it is in that provider.  If it's not given,
-            // it's in the internal cache.
-            if (providerName != null) {
-                OutputCacheProviderCollection providers = OutputCache.Providers;
-                provider = providers?[providerName] as OutputCacheProviderAsync;
-            }
-            else {
-                provider = inMemoryOutputCacheProvider;
-            }
-            if (provider != null) {
-                await provider.RemoveAsync(key);
-            }
+            var provider = GetProvider(providerName) ?? inMemoryOutputCacheProvider;
+
+            await provider.RemoveAsync(key);
         }
 
-        private OutputCacheProviderAsync GetProvider() {
-            OutputCacheProviderAsync provider = null;
-            string providerName = _context.ApplicationInstance.GetOutputCacheProviderName(_context.ApplicationInstance.Context);
-            if (OutputCache.Providers != null) {
-                provider = OutputCache.Providers[providerName] as OutputCacheProviderAsync;
-            }
+        private OutputCacheProviderAsync GetProvider(string providerName = null) {
+            var provider = _cacheUtility.GetOutputCacheProvider(_context, providerName);
+
             // if the context did not provide a provider, then use the default internal output cache provider for everything
             return provider ?? inMemoryOutputCacheProvider;
         }
@@ -524,8 +528,8 @@
             }
             // deserialize the file dependencies
             var dep = new CacheDependency(fileDeps);
-            int idStartIndex = OutputcacheKeyprefixDependencies.Length;
-            int idLength = depKey.Length - idStartIndex;
+            var idStartIndex = OutputcacheKeyprefixDependencies.Length;
+            var idLength = depKey.Length - idStartIndex;
             // have the file dependencies changed?
             if (string.Compare(dep.GetUniqueID(), 0, depKey, idStartIndex, idLength, StringComparison.OrdinalIgnoreCase) == 0) {
                 // file dependencies have not changed--cache them with callback to remove OutputCacheEntry if they change
@@ -543,7 +547,7 @@
         }
 
         private async Task RemoveAsync(string key) {
-            OutputCacheProviderAsync provider = GetProvider();
+            var provider = GetProvider();
             await provider.RemoveAsync(key);
         }
 
@@ -555,7 +559,7 @@
             DateTime absExp,
             TimeSpan slidingExpiration) {
 
-            OutputCacheProviderAsync provider = GetProvider();
+            var provider = GetProvider();
             // CachedVary can be serialized.
             // CachedRawResponse is not always serializable.
             bool canUseProvider = (rawResponse.CachePolicy.IsValidationCallbackSerializable()
@@ -615,9 +619,10 @@
         }
 
         private CacheItemPolicy GetCacheItemPolicy(CacheDependency dependency) {
-            CacheItemPolicy cacheItemPolicy = new CacheItemPolicy();
+            var cacheItemPolicy = new CacheItemPolicy();
             cacheItemPolicy.RemovedCallback = (new RemovedCallback(s_dependencyRemovedCallback)).CacheEntryRemovedCallback;
-            List<string> filePaths = new List<string>();
+            var filePaths = new List<string>();
+
             foreach (string fileDependency in dependency.GetFileDependencies()) {
                 filePaths.Add(fileDependency);
             }
@@ -635,9 +640,10 @@
             if (headerContentEncodings == null) {
                 return true;
             }
+
             // return true if the Content-Encoding header is listed within varyByContentEncodings
-            string[] headerContentEncodingCollection = headerContentEncodings.Split(new Char[] { ',' });
-            foreach (string headerContentEncoding in headerContentEncodingCollection) {
+            var headerContentEncodingCollection = headerContentEncodings.Split(new Char[] { ',' });
+            foreach (var headerContentEncoding in headerContentEncodingCollection) {
                 if (varyByContentEncodings.GetContentEncodings().Any(varyByContentEncoding => varyByContentEncoding.Equals(headerContentEncoding, StringComparison.OrdinalIgnoreCase))) {
                     return true;
                 }
@@ -646,9 +652,9 @@
         }
 
         private bool ContainsNonShareableCookies() {
-            HttpCookieCollection cookies = _context.Response.Cookies;
+            var cookies = _context.Response.Cookies;
             for (int i = 0; i < cookies.Count; i++) {
-                HttpCookie httpCookie = cookies[i];
+                var httpCookie = cookies[i];
                 if (httpCookie != null && !httpCookie.Shareable) {
                     return true;
                 }
@@ -666,11 +672,11 @@
             response.StatusCode = rawResponse.StatusCode;
             response.StatusDescription = rawResponse.StatusDescription;
             // restore headers
-            foreach (string h in rawResponse.Headers.AllKeys) {
+            foreach (var h in rawResponse.Headers.AllKeys) {
                 response.Headers.Add(h, rawResponse.Headers[h]);
             }
             // restore content
-            OutputCacheUtility.SetContentBuffers(response, (ArrayList)rawResponse.Buffers);
+            _cacheUtility.SetContentBuffers(_context, (ArrayList)rawResponse.Buffers);
             response.SuppressContent = !sendBody;
         }
 
@@ -679,7 +685,7 @@
             var response = _context.Response;
             if (response.HeadersWritten)
                 throw new HttpException(SR.Cannot_get_snapshot_if_not_buffered);
-            foreach (string h in response.Headers.AllKeys) {
+            foreach (var h in response.Headers.AllKeys) {
                 if
                     (h.Equals(HttpHeaders.Server, StringComparison.OrdinalIgnoreCase) ||
                      h.Equals(HttpHeaders.SetCookie, StringComparison.OrdinalIgnoreCase) ||
@@ -696,68 +702,70 @@
                 StatusCode = response.StatusCode,
                 StatusDescription = response.StatusDescription,
                 Headers = headers,
-                Buffers = OutputCacheUtility.GetContentBuffers(response),
+                Buffers = _cacheUtility.GetContentBuffers(_context),
             };
         }
 
         private HttpCachePolicySettings GetCurrentSettings() {
             //update some headers fields within the response.cache object
-            var response = _context.Response;
+            var cache = _cacheUtility.GetCachePolicyFromHttpContextBase(_context);
             return new HttpCachePolicySettings {
-                Cacheability = response.Cache.GetCacheability(),
-                ValidationCallbackInfo = OutputCacheUtility.GetValidationCallbacks(response),
-                VaryByContentEncodings = response.Cache.VaryByContentEncodings.GetContentEncodings(),
-                VaryByHeaders = response.Cache.VaryByHeaders.GetHeaders(),
-                VaryByParams = response.Cache.VaryByParams.GetParams(),
-                VaryByCustom = response.Cache.GetVaryByCustom(),
-                UtcExpires = response.Cache.GetExpires(),
-                MaxAge = response.Cache.GetMaxAge(),
-                SlidingExpiration = response.Cache.HasSlidingExpiration(),
-                IgnoreRangeRequests = response.Cache.GetIgnoreRangeRequests(),
-                UtcLastModified = response.Cache.GetUtcLastModified(),
-                ETag = response.Cache.GetETag(),
-                GenerateLastModifiedFromFiles = response.Cache.GetLastModifiedFromFileDependencies(),
-                GenerateEtagFromFiles = response.Cache.GetETagFromFileDependencies(),
-                UtcTimestampCreated = response.Cache.UtcTimestampCreated
+                Cacheability = cache.GetCacheability(),
+                ValidationCallbackInfo = _cacheUtility.GetValidationCallbacks(_context),
+                VaryByContentEncodings = cache.VaryByContentEncodings.GetContentEncodings(),
+                VaryByHeaders = cache.VaryByHeaders.GetHeaders(),
+                VaryByParams = cache.VaryByParams.GetParams(),
+                VaryByCustom = cache.GetVaryByCustom(),
+                UtcExpires = cache.GetExpires(),
+                MaxAge = cache.GetMaxAge(),
+                SlidingExpiration = cache.HasSlidingExpiration(),
+                IgnoreRangeRequests = cache.GetIgnoreRangeRequests(),
+                UtcLastModified = cache.GetUtcLastModified(),
+                ETag = cache.GetETag(),
+                GenerateLastModifiedFromFiles = cache.GetLastModifiedFromFileDependencies(),
+                GenerateEtagFromFiles = cache.GetETagFromFileDependencies(),
+                UtcTimestampCreated = cache.UtcTimestampCreated
             };
         }
 
         private void ResetFromHttpCachePolicySettings(HttpCachePolicySettings settings, DateTime utcTimestampRequest) {
-            var response = _context.Response;
-            response.Cache.SetCacheability(settings.Cacheability);
-            response.Cache.VaryByContentEncodings.SetContentEncodings(settings.VaryByContentEncodings);
-            response.Cache.VaryByHeaders.SetHeaders(settings.VaryByHeaders);
-            response.Cache.VaryByParams.SetParams(settings.VaryByParams);
+            var cache = _cacheUtility.GetCachePolicyFromHttpContextBase(_context);
+
+            cache.SetCacheability(settings.Cacheability);
+            cache.VaryByContentEncodings.SetContentEncodings(settings.VaryByContentEncodings);
+            cache.VaryByHeaders.SetHeaders(settings.VaryByHeaders);
+            cache.VaryByParams.SetParams(settings.VaryByParams);
             if (settings.VaryByCustom != null) {
-                response.Cache.SetVaryByCustom(settings.VaryByCustom);
+                cache.SetVaryByCustom(settings.VaryByCustom);
             }
-            response.Cache.SetExpires(settings.UtcExpires);
-            response.Cache.SetMaxAge(settings.MaxAge);
-            response.Cache.SetSlidingExpiration(settings.SlidingExpiration);
-            response.Cache.UtcTimestampCreated = settings.UtcTimestampCreated;
-            response.Cache.SetValidUntilExpires(settings.ValidUntilExpires);
-            response.Cache.SetLastModified(settings.UtcLastModified);
+            cache.SetExpires(settings.UtcExpires);
+            cache.SetMaxAge(settings.MaxAge);
+            cache.SetSlidingExpiration(settings.SlidingExpiration);
+            cache.UtcTimestampCreated = settings.UtcTimestampCreated;
+            cache.SetValidUntilExpires(settings.ValidUntilExpires);
+            cache.SetLastModified(settings.UtcLastModified);
             if (settings.ETag != null) {
-                response.Cache.SetETag(settings.ETag);
+                cache.SetETag(settings.ETag);
             }
             if (settings.GenerateLastModifiedFromFiles) {
-                response.Cache.SetLastModifiedFromFileDependencies();
+                cache.SetLastModifiedFromFileDependencies();
             }
             if (settings.GenerateEtagFromFiles) {
-                response.Cache.SetETagFromFileDependencies();
+                cache.SetETagFromFileDependencies();
             }
             if (settings.ValidationCallbackInfo == null) {
                 return;
             }
-            foreach (KeyValuePair<HttpCacheValidateHandler, object> vci in settings.ValidationCallbackInfo) {
-                response.Cache.AddValidationCallback(vci.Key, vci.Value);
+            foreach (var vci in settings.ValidationCallbackInfo) {
+                cache.AddValidationCallback(vci.Key, vci.Value);
             }
         }
 
         private void UpdateCachedHeaders() {
+            var cache = _cacheUtility.GetCachePolicyFromHttpContextBase(_context);
             //To enable Out of Band OutputCache Module support, we will always refresh the UtcTimestampRequest.
-            if (_context.Response.Cache.UtcTimestampCreated == DateTime.MinValue) {
-                _context.Response.Cache.UtcTimestampCreated = _context.Timestamp.ToUniversalTime();
+            if (cache.UtcTimestampCreated == DateTime.MinValue) {
+                cache.UtcTimestampCreated = _context.Timestamp.ToUniversalTime();
             }
             UpdateFromDependencies();
         }
@@ -765,15 +773,15 @@
         private void UpdateFromDependencies() {
             CacheDependency dep = null;
             DateTime utcFileLastModifiedMax;
-            var response = _context.Response;
+            var cache = _cacheUtility.GetCachePolicyFromHttpContextBase(_context);
             // if response.Cache.GetETag() != null && response.Cache.GetETagFromFileDependencies() == true, then this HttpCachePolicy
             // was created from HttpCachePolicySettings and we don't need to update _etag.
-            if (response.Cache.GetETag() == null && response.Cache.GetETagFromFileDependencies()) {
-                dep = OutputCacheUtility.CreateCacheDependency(response);
+            if (cache.GetETag() == null && cache.GetETagFromFileDependencies()) {
+                dep = _cacheUtility.CreateCacheDependency(_context);
                 if (dep == null) {
                     return;
                 }
-                string id = dep.GetUniqueID();
+                var id = dep.GetUniqueID();
                 if (id == null) {
                     throw new HttpException(SR.No_UniqueId_Cache_Dependency);
                 }
@@ -783,14 +791,14 @@
                 sb.Append(id);
                 sb.Append("+LM");
                 sb.Append(utcFileLastModifiedMax.Ticks.ToString(CultureInfo.InvariantCulture));
-                response.Cache.SetETag("\"" +
+                cache.SetETag("\"" +
                                        System.Convert.ToBase64String(
                                            CryptoUtil.ComputeHash(Encoding.UTF8.GetBytes(sb.ToString()))) + "\"");
-                if (!response.Cache.GetLastModifiedFromFileDependencies())
+                if (!cache.GetLastModifiedFromFileDependencies())
                     return;
             }
             if (dep == null) {
-                dep = OutputCacheUtility.CreateCacheDependency(response);
+                dep = _cacheUtility.CreateCacheDependency(_context);
                 if (dep == null) {
                     return;
                 }
@@ -800,12 +808,12 @@
         }
 
         private void UtcSetLastModified(DateTime utcDate) {
-            var response = _context.Response;
+            var cache = _cacheUtility.GetCachePolicyFromHttpContextBase(_context);
             /*
              * Time may differ if the system time changes in the middle of the request. 
              * Adjust the timestamp to Now if necessary.
              */
-            DateTime utcNow = DateTime.UtcNow;
+            var utcNow = DateTime.UtcNow;
             if (utcDate > utcNow) {
                 utcDate = utcNow;
             }
@@ -816,21 +824,22 @@
              * will be off.
              */
             utcDate = new DateTime(utcDate.Ticks - (utcDate.Ticks % TimeSpan.TicksPerSecond));
-            if (response.Cache.GetUtcLastModified() != DateTime.MinValue || utcDate > response.Cache.GetUtcLastModified()) {
-                response.Cache.SetLastModified(utcDate);
+            if (cache.GetUtcLastModified() != DateTime.MinValue || utcDate > cache.GetUtcLastModified()) {
+                cache.SetLastModified(utcDate);
             }
         }
 
         private DateTime UpdateLastModifiedTimeFromDependency(CacheDependency dep) {
-            DateTime utcFileLastModifiedMax = dep.UtcLastModified;
-            if (utcFileLastModifiedMax < _context.Response.Cache.GetUtcLastModified()) {
-                utcFileLastModifiedMax = _context.Response.Cache.GetUtcLastModified();
+            var utcFileLastModifiedMax = dep.UtcLastModified;
+            var cache = _cacheUtility.GetCachePolicyFromHttpContextBase(_context);
+            if (utcFileLastModifiedMax < cache.GetUtcLastModified()) {
+                utcFileLastModifiedMax = cache.GetUtcLastModified();
             }
             // account for difference between file system time 
             // and DateTime.Now. On some machines it appears that
             // the last modified time is further in the future
             // that DateTime.Now                
-            DateTime utcNow = DateTime.UtcNow;
+            var utcNow = DateTime.UtcNow;
             if (utcFileLastModifiedMax > utcNow) {
                 utcFileLastModifiedMax = utcNow;
             }
@@ -839,7 +848,7 @@
 
         private string CreateOutputCachedItemKey(string path, string verb, CachedVary cachedVary) {
             var request = _context.Request;
-            StringBuilder sb = verb.Equals(HttpMethods.POST, StringComparison.OrdinalIgnoreCase)
+            var sb = verb.Equals(HttpMethods.POST, StringComparison.OrdinalIgnoreCase)
                 ? new StringBuilder(OutputcacheKeyprefixPost, path.Length + OutputcacheKeyprefixPost.Length)
                 : new StringBuilder(OutputcacheKeyprefixGet, path.Length + OutputcacheKeyprefixGet.Length);
             sb.Append(CultureInfo.InvariantCulture.TextInfo.ToLower(path));
@@ -915,8 +924,7 @@
                 sb.Append("N");
                 sb.Append(cachedVary.VaryByCustom);
                 sb.Append("V");
-                value = _context.ApplicationInstance.GetVaryByCustomString(
-                    _context, cachedVary.VaryByCustom) ?? NullVarybyValue;
+                value = _cacheUtility.GetVaryByCustomString(_context, cachedVary.VaryByCustom) ?? NullVarybyValue;
                 sb.Append(value);
             }
             /* 
@@ -938,7 +946,7 @@
                         request.InputStream.CopyTo(ms);
                         byte[] buf = ms.ToArray();
                         // Use SHA256 to generate a collision-free hash of the input data
-                        value = System.Convert.ToBase64String((CryptoUtil.ComputeHash(buf)));
+                        value = Convert.ToBase64String((CryptoUtil.ComputeHash(buf)));
                         sb.Append(value);
                     }
                 }
@@ -947,13 +955,13 @@
             * VaryByContentEncoding
             */
             sb.Append("E");
-            string[] contentEncodings = cachedVary.ContentEncodings;
+            var contentEncodings = cachedVary.ContentEncodings;
             if (contentEncodings == null) {
                 return sb.ToString();
             }
             if (_context.Request.Headers[HttpHeaders.AcceptEncoding] != null) {
-                string[] headerContentEncodingCollection = _context.Request.Headers[HttpHeaders.AcceptEncoding].Split(new char[] { ',' });
-                foreach (string headerContentEncoding in headerContentEncodingCollection) {
+                var headerContentEncodingCollection = _context.Request.Headers[HttpHeaders.AcceptEncoding].Split(new char[] { ',' });
+                foreach (var headerContentEncoding in headerContentEncodingCollection) {
                     if (contentEncodings.Any(t => t.Equals(headerContentEncoding, StringComparison.OrdinalIgnoreCase))) {
                         sb.Append(headerContentEncoding);
                         break;
@@ -970,13 +978,14 @@
         // 1 means use this coding.  0 means don't use this coding.  A number between
         // 1 and 0 must be compared with other codings.  -1 means the coding was not found
         private double GetAcceptableEncodingHelper(string coding, string acceptEncoding) {
-            double weight = -1;
-            int startSearchIndex = 0;
-            int codingLength = coding.Length;
-            int acceptEncodingLength = acceptEncoding.Length;
-            int maxSearchIndex = acceptEncodingLength - codingLength;
+            var weight = -1d;
+            var startSearchIndex = 0;
+            var codingLength = coding.Length;
+            var acceptEncodingLength = acceptEncoding.Length;
+            var maxSearchIndex = acceptEncodingLength - codingLength;
+
             while (startSearchIndex < maxSearchIndex) {
-                int indexStart = acceptEncoding.IndexOf(coding, startSearchIndex, StringComparison.OrdinalIgnoreCase);
+                var indexStart = acceptEncoding.IndexOf(coding, startSearchIndex, StringComparison.OrdinalIgnoreCase);
 
                 if (indexStart == -1) {
                     break; // not found
@@ -984,7 +993,7 @@
 
                 // if index is in middle of string, previous char should be ' ' or ','
                 if (indexStart != 0) {
-                    char previousChar = acceptEncoding[indexStart - 1];
+                    var previousChar = acceptEncoding[indexStart - 1];
                     if (previousChar != ' ' && previousChar != ',') {
                         startSearchIndex = indexStart + 1;
                         continue; // move index forward and continue searching
@@ -994,8 +1003,8 @@
                 // the match starts on a token boundary, but it must also end
                 // on a token boundary ...
 
-                int indexNextChar = indexStart + codingLength;
-                char nextChar = '\0';
+                var indexNextChar = indexStart + codingLength;
+                var nextChar = '\0';
                 if (indexNextChar < acceptEncodingLength) {
                     nextChar = acceptEncoding[indexNextChar];
                     while (nextChar == ' ' && ++indexNextChar < acceptEncodingLength) {
@@ -1015,20 +1024,20 @@
         // Gets the weight of the encoding beginning at startIndex.
         // If Accept-Encoding header is formatted incorrectly, return 1 to short-circuit search.
         private double ParseWeight(string acceptEncoding, int startIndex) {
-            double weight = 1;
-            int tokenEnd = acceptEncoding.IndexOf(',', startIndex);
+            var weight = 1d;
+            var tokenEnd = acceptEncoding.IndexOf(',', startIndex);
             if (tokenEnd == -1) {
                 tokenEnd = acceptEncoding.Length;
             }
-            int qIndex = acceptEncoding.IndexOf('q', startIndex);
+            var qIndex = acceptEncoding.IndexOf('q', startIndex);
             if (qIndex <= -1 || qIndex >= tokenEnd) {
                 return weight;
             }
-            int equalsIndex = acceptEncoding.IndexOf('=', qIndex);
+            var equalsIndex = acceptEncoding.IndexOf('=', qIndex);
             if (equalsIndex <= -1 || equalsIndex >= tokenEnd) {
                 return weight;
             }
-            string s = acceptEncoding.Substring(equalsIndex + 1, tokenEnd - (equalsIndex + 1));
+            var s = acceptEncoding.Substring(equalsIndex + 1, tokenEnd - (equalsIndex + 1));
             double d;
             if (double.TryParse(s, NumberStyles.Float & ~NumberStyles.AllowLeadingSign & ~NumberStyles.AllowExponent,
                 CultureInfo.InvariantCulture, out d)) {
@@ -1039,7 +1048,7 @@
         }
 
         private bool IsIdentityAcceptable(string acceptEncoding) {
-            double identityWeight = GetAcceptableEncodingHelper(Identity, acceptEncoding);
+            var identityWeight = GetAcceptableEncodingHelper(Identity, acceptEncoding);
             if (identityWeight == 0
                 || (identityWeight <= 0 && GetAcceptableEncodingHelper(Asterisk, acceptEncoding) == 0)) {
                 return false;
@@ -1050,20 +1059,20 @@
         private async Task InsertResponseAsync(string key, DateTime utcExpires, CachedVary cachedVary, HttpCachePolicySettings settings, string keyRawResponse, TimeSpan slidingDelta) {
             if (utcExpires > DateTime.Now) {
                 // Create the response object to be sent on cache hits.
-                HttpRawResponse httpRawResponse = GetSnapshot();
+                var httpRawResponse = GetSnapshot();
                 string kernelCacheUrl = null;
                 //Insert the response into kernel Cache
                 if (IsKernelCacheAPISupported()) {
-                    kernelCacheUrl = OutputCacheUtility.SetupKernelCaching(null, _context.Response);
+                    kernelCacheUrl = _cacheUtility.SetupKernelCaching(null, _context);
                 }
-                Guid cachedVaryId = cachedVary?.CachedVaryId ?? Guid.Empty;
+                var cachedVaryId = cachedVary?.CachedVaryId ?? Guid.Empty;
                 var cachedRawResponse = new CachedRawResponse {
                     RawResponse = httpRawResponse,
                     CachePolicy = settings,
                     KernelCacheUrl = kernelCacheUrl,
                     CachedVaryId = cachedVaryId
                 };
-                using (CacheDependency dep = OutputCacheUtility.CreateCacheDependency(_context.Response)) {
+                using (var dep = _cacheUtility.CreateCacheDependency(_context)) {
                     await InsertResponseAsync(key, cachedVary,
                         keyRawResponse, cachedRawResponse,
                         dep,
@@ -1074,9 +1083,9 @@
 
         private bool CheckIfNoneMatch(HttpCachePolicySettings settings) {
             /* Check "If-None-Match" header */
-            string etagHeader = _context.Request.Headers[HttpHeaders.IfNoneMatch];
+            var etagHeader = _context.Request.Headers[HttpHeaders.IfNoneMatch];
             if (etagHeader != null) {
-                string[] etags = etagHeader.Split(s_fieldSeparators);
+                var etags = etagHeader.Split(s_fieldSeparators);
                 for (int i = 0, n = etags.Length; i < n; i++) {
                     if (i == 0 && etags[i].Equals(Asterisk)) {
                         return true;
@@ -1091,7 +1100,7 @@
         }
 
         private bool CheckIfModifiedSince(HttpCachePolicySettings settings) {
-            string ifModifiedSinceHeader = _context.Request.Headers[HttpHeaders.IfModifiedSince];
+            var ifModifiedSinceHeader = _context.Request.Headers[HttpHeaders.IfModifiedSince];
             if (ifModifiedSinceHeader != null && settings.UtcLastModified != DateTime.MinValue &&
                     settings.UtcLastModified <= HttpDate.UtcParse(ifModifiedSinceHeader) &&
                     HttpDate.UtcParse(ifModifiedSinceHeader) <= _context.Timestamp.ToUniversalTime()) {
@@ -1100,7 +1109,7 @@
             return false;
         }
 
-        private bool checkMaxAge(string directive, HttpCachePolicySettings settings) {
+        internal bool CheckMaxAge(string directive, HttpCachePolicySettings settings) {
             if (directive.Equals(CacheDirectives.NoCache, StringComparison.OrdinalIgnoreCase) || directive.Equals(CacheDirectives.NoStore, StringComparison.OrdinalIgnoreCase)) {
                 return true;
             }

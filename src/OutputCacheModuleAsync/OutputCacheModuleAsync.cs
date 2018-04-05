@@ -1,4 +1,7 @@
-﻿namespace Microsoft.AspNet.OutputCache {
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license. See the License.txt file in the project root for full license information.
+
+namespace Microsoft.AspNet.OutputCache {
     using System;
     using System.Threading.Tasks;
     using System.Web;
@@ -42,7 +45,7 @@
 
         private async Task OnEnterAsync(object source, EventArgs eventArgs) {
             var app = (HttpApplication)source;
-            var helper = new OutputCacheHelper(app.Context);
+            var helper = new OutputCacheHelper(new HttpContextWrapper(app.Context));
             if (!helper.IsHttpMethodSupported()) {
                 return;
             }
@@ -103,7 +106,7 @@
         }
 
         private async Task OnLeaveAsync(object source, EventArgs eventArgs) {
-            var helper = new OutputCacheHelper(((HttpApplication)source).Context);
+            var helper = new OutputCacheHelper(new HttpContextWrapper(((HttpApplication)source).Context));
             if (helper.IsResponseCacheable()) {
                 await helper.CacheResponseAsync();
             }

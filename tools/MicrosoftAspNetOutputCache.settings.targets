@@ -11,12 +11,12 @@
     <VersionStartYear>2016</VersionStartYear>
     <VersionMajor>1</VersionMajor>
     <VersionMinor>0</VersionMinor>
-    <VersionRelease>0</VersionRelease>
+    <VersionRelease>1</VersionRelease>
     <VersionRelease Condition="'$(BuildQuality)' != 'rtm'">$(VersionRelease)-$(BuildQuality)</VersionRelease>
   </PropertyGroup>
 
   <PropertyGroup Label="NuGet package dependencies">
-    <OutputCacheModuleAsyncNuGetPackageVersion>1.0.0</OutputCacheModuleAsyncNuGetPackageVersion>
+    <OutputCacheModuleAsyncNuGetPackageVersion>1.0.1</OutputCacheModuleAsyncNuGetPackageVersion>
   </PropertyGroup>
 
   <!-- Default properties -->

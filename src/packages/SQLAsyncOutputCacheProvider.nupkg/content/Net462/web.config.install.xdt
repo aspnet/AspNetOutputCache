@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">
+  <system.web>
+    <caching>
+	 <outputCache xdt:Transform="Remove">
+	 </outputCache>
+    </caching>
+  </system.web> 
+ <system.web>
+     <caching xdt:Transform="InsertIfMissing">
+      <outputCache defaultProvider="SQLAsyncOutputCacheProvider" xdt:Transform="InsertIfMissing"> 
+        <providers>
+        <!--
+            Please change the connection string named "DefaultConnection" to connect to an instance
+            of SQL Server which you will use as the data store.
+        -->
+          <add name="SQLAsyncOutputCacheProvider" connectionStringName="DefaultConnection"
+              type="Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.SQLAsyncOutputCacheProvider, Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" 
+                 xdt:Transform="InsertIfMissing"/>
+        </providers>
+      </outputCache>
+    </caching>
+  </system.web>
+</configuration>

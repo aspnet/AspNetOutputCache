@@ -1,27 +1,47 @@
-﻿namespace Microsoft.AspNet.OutputCache {
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license. See the License.txt file in the project root for full license information.
+
+namespace Microsoft.AspNet.OutputCache {
     using System;
     using System.Runtime.Caching;
     using System.Threading.Tasks;
     using System.Web.Caching;
 
-    class InMemoryOutputCacheProvider : OutputCacheProviderAsync {
-        private readonly MemoryCache _cache = new MemoryCache("Microsoft.AspNet.OutputCache Default In - Memory Provider");
+    class InMemoryOutputCacheProvider : OutputCacheProviderAsync, ICacheDependencyHandler {
+        private static ObjectCache _cache = new MemoryCache("InMemoryOutputCacheProvider");
 
-        public override Task<object> GetAsync(string key) {
-            return Task.FromResult(Get(key)); 
+        internal static ObjectCache InternalCache
+        {
+            get { return _cache; }
+            set { _cache = value; }
         }
 
         public override Task<object> AddAsync(string key, object entry, DateTime utcExpiry) {
-            return Task.FromResult(Add(key,entry,utcExpiry));
+            DateTimeOffset expiration = (utcExpiry == Cache.NoAbsoluteExpiration) ? ObjectCache.InfiniteAbsoluteExpiration : utcExpiry;
+            return Task.FromResult(_cache.AddOrGetExisting(key, entry, expiration));
         }
 
-        public override Task SetAsync(string key, object entry, DateTime utcExpiry) {
-            Set(key, entry, utcExpiry);
+        Task<object> ICacheDependencyHandler.AddAsync(string key, object entry, CacheItemPolicy cacheItemPolicy) {
+            return Task.FromResult(_cache.AddOrGetExisting(key, entry, cacheItemPolicy));
+        }
+
+        Task ICacheDependencyHandler.SetAsync(string key, object entry, CacheItemPolicy cacheItemPolicy) {
+            _cache.Set(key, entry, cacheItemPolicy);
             return Task.CompletedTask;
         }
 
-        public override Task RemoveAsync(string key) { 
-            Remove(key);
+        public override Task<object> GetAsync(string key) {
+            return Task.FromResult(_cache.Get(key));
+        }
+
+        public override Task SetAsync(string key, object entry, DateTime utcExpiry) {
+            DateTimeOffset expiration = (utcExpiry == Cache.NoAbsoluteExpiration) ? ObjectCache.InfiniteAbsoluteExpiration : utcExpiry;
+            _cache.Set(key, entry, expiration);
+            return Task.CompletedTask;
+        }
+
+        public override Task RemoveAsync(string key) {
+            _cache.Remove(key);
             return Task.CompletedTask;
         }
 

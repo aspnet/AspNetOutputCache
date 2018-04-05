@@ -5,7 +5,7 @@
   <modules>
      <remove name="OutputCache" xdt:Transform="Remove" xdt:Locator="Match(name)" />
      <add name="OutputCache"
-           type="Microsoft.AspNet.OutputCache.OutputCacheModuleAsync, Microsoft.AspNet.OutputCache.OutputCacheModuleAsync"
+           type="Microsoft.AspNet.OutputCache.OutputCacheModuleAsync, Microsoft.AspNet.OutputCache.OutputCacheModuleAsync, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35"
            preCondition="integratedMode" xdt:Transform="Remove" xdt:Locator="Match(type)" />
     </modules>
   </system.webServer>

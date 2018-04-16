@@ -312,6 +312,7 @@ namespace Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider {
 
         private void CreateTableIfNotExists(string createTableSql) {
             using (var cmd = new SqlCommand()) {
+                cmd.CommandText = createTableSql;
                 using (var connection = new SqlConnection(ConnectionString)) {
                     SqlExecuteNonQueryAsync(connection, cmd).GetAwaiter().GetResult();
                 }

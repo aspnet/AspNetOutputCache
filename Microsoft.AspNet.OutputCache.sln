@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.AspNet.OutputCach
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.Test", "test\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.Test\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.Test.csproj", "{B2C127BD-077B-4B9A-8163-F77DF76CE6A8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider", "src\CosmosDBTableAsyncOutputCacheProvider\Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider.csproj", "{9FDBB781-C469-4D9E-B687-4087CD422B13}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -37,6 +39,10 @@ Global
 		{B2C127BD-077B-4B9A-8163-F77DF76CE6A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B2C127BD-077B-4B9A-8163-F77DF76CE6A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B2C127BD-077B-4B9A-8163-F77DF76CE6A8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9FDBB781-C469-4D9E-B687-4087CD422B13}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9FDBB781-C469-4D9E-B687-4087CD422B13}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9FDBB781-C469-4D9E-B687-4087CD422B13}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9FDBB781-C469-4D9E-B687-4087CD422B13}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -46,6 +52,7 @@ Global
 		{062FD141-4E51-4943-8C69-385DDE3D2792} = {D256C480-BB19-4239-AD53-DF634A794F41}
 		{89636B89-D392-47CA-9D81-BEB4C5252D75} = {BCF9496E-D71E-4F4A-814B-B37830A87FF3}
 		{B2C127BD-077B-4B9A-8163-F77DF76CE6A8} = {BCF9496E-D71E-4F4A-814B-B37830A87FF3}
+		{9FDBB781-C469-4D9E-B687-4087CD422B13} = {D256C480-BB19-4239-AD53-DF634A794F41}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {51897B01-673A-47FD-87BC-8FD7C01950E6}

@@ -1,23 +1,8 @@
-<Project DefaultTargets="UnitTest" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <CustomBeforeProjectTargets>$(MSBuildThisFileDirectory)MicrosoftAspNetOutputCache.Extensions.settings.targets</CustomBeforeProjectTargets>
   </PropertyGroup>
   <Import Project="$(CustomBeforeProjectTargets)" Condition="Exists('$(CustomBeforeProjectTargets)')" Label="Pre-targets Build Extensibility Point"/>
-
-  <!-- Configurable properties-->
-
-  <PropertyGroup>
-    <BuildQuality Condition="'$(BuildQuality)' == ''">rtm</BuildQuality>
-    <VersionStartYear>2016</VersionStartYear>
-    <VersionMajor>1</VersionMajor>
-    <VersionMinor>0</VersionMinor>
-    <VersionRelease>1</VersionRelease>
-    <VersionRelease Condition="'$(BuildQuality)' != 'rtm'">$(VersionRelease)-$(BuildQuality)</VersionRelease>
-  </PropertyGroup>
-
-  <PropertyGroup Label="NuGet package dependencies">
-    <OutputCacheModuleAsyncNuGetPackageVersion>1.0.1</OutputCacheModuleAsyncNuGetPackageVersion>
-  </PropertyGroup>
 
   <!-- Default properties -->
 

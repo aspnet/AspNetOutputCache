@@ -4,6 +4,7 @@
   <ItemGroup>
     <AssemblyProject Include="src\OutputCacheModuleAsync\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.csproj" />
     <AssemblyProject Include="src\SQLAsyncOutputCacheProvider\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.csproj" />
+    <AssemblyProject Include="src\CosmosDBTableAsyncOutputCacheProvider\Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider.csproj" />
   </ItemGroup>
   <ItemGroup>
     <TestProject Include="test\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.Test\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.Test.csproj" />

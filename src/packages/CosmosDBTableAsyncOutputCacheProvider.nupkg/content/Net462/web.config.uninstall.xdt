@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<configuration 
+  xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">
+  <appSettings>
+    <add key="StorageConnectionStringForOutputCacheProvider" xdt:Transform="Remove" xdt:Locator="Match(key)" />
+  </appSettings>
+  <system.web>
+    <caching>
+      <outputCache defaultProvider="CosmosDBTableAsyncOutputCacheProvider" xdt:Transform="Remove">
+        <providers>
+          <add type="Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider.CosmosDBTableAsyncOutputCacheProvider, Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" xdt:Transform="Remove" xdt:Locator="Match(type)" />
+        </providers>
+      </outputCache>
+    </caching>
+  </system.web>
+</configuration>

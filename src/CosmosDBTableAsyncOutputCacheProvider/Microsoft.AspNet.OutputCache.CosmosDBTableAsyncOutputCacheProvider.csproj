@@ -74,11 +74,11 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>SR.resx</DependentUpon>
     </Compile>
-    <Compile Include="TableOperationWrapper.cs" />
+    <Compile Include="TableOperationHelper.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Azure.CosmosDB.Table">
-      <Version>1.1.2</Version>
+      <Version>1.1.0</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>

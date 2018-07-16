@@ -2,6 +2,10 @@
   <PropertyGroup>
     <CustomBeforeProjectTargets>$(MSBuildThisFileDirectory)MicrosoftAspNetOutputCache.Extensions.settings.targets</CustomBeforeProjectTargets>
   </PropertyGroup>
+  <Import Project="$(RepositoryRoot)\packages\microbuild.core.0.3.0\build\MicroBuild.Core.props" 
+      Condition="Exists('$(RepositoryRoot)\packages\microbuild.core.0.3.0\build\MicroBuild.Core.props')" />
+  <Import Project="$(RepositoryRoot)\packages\microbuild.core.0.3.0\build\MicroBuild.Core.targets" 
+      Condition="Exists('$(RepositoryRoot)\packages\microbuild.core.0.3.0\build\MicroBuild.Core.targets')" />
   <Import Project="$(CustomBeforeProjectTargets)" Condition="Exists('$(CustomBeforeProjectTargets)')" Label="Pre-targets Build Extensibility Point"/>
 
   <!-- Default properties -->
@@ -34,4 +38,21 @@
     <CustomAfterMicrosoftCommonTargets>$(RepositoryRoot)tools\MicrosoftAspNetOutputCache.targets</CustomAfterMicrosoftCommonTargets>
     <CustomAfterNuGetProjTargets>$(CustomAfterMicrosoftCommonTargets)</CustomAfterNuGetProjTargets>
   </PropertyGroup>
+
+    <Target Name="AfterBuild">
+      <PropertyGroup>
+              <OutDir>$(PackageOutputDir)</OutDir>
+          </PropertyGroup>
+          <ItemGroup>
+              <FilesToSign Include="$(NuGetPackTargetFile)" Condition="'$(SignAssembly)' == 'true'">
+                  <Authenticode>NuGet</Authenticode>
+              </FilesToSign>
+          </ItemGroup>
+      <ItemGroup>
+        <FilesToSign Include="$(TargetPath)" Condition="'$(SignAssembly)' == 'true'">
+          <Authenticode>Microsoft</Authenticode>
+          <StrongName>MsSharedLib72</StrongName>
+        </FilesToSign>
+      </ItemGroup>
+  </Target>
 </Project>

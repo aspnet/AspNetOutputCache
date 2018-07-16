@@ -1,13 +1,12 @@
-﻿using Microsoft.Azure.CosmosDB.Table;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license. See the License.txt file in the project root for full license information.
 
 namespace Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider
 {
-    static class TableOperationWrapper
+    using Microsoft.Azure.CosmosDB.Table;
+    using System;
+
+    static class TableOperationHelper
     {
         public static TableOperation Retrieve(string rowkey)
         {

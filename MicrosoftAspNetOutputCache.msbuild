@@ -9,6 +9,7 @@
   <ItemGroup>
     <TestProject Include="test\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.Test\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.Test.csproj" />
     <TestProject Include="test\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test.csproj" />
+    <TestProject Include="test\Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider.Test\Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider.Test.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageProject Include="src\Packages\Packages.csproj" />

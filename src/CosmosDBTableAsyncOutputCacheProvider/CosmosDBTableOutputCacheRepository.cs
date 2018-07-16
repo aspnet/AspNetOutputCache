@@ -1,4 +1,5 @@
-﻿
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license. See the License.txt file in the project root for full license information.
 
 namespace Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider
 {
@@ -10,8 +11,8 @@ namespace Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider
     using Microsoft.Azure.CosmosDB.Table;
     using Microsoft.Azure.Storage;
     using Resource;
-
-    public class CosmosDBTableOutputCacheRepository : ITableOutputCacheRepository
+    
+    class CosmosDBTableOutputCacheRepository : ITableOutputCacheRepository
     {
         private const string TableNameKey = "tableName";
         private const string ConnectionStringKey = "connectionStringName";
@@ -19,10 +20,7 @@ namespace Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider
 
         private CloudTable _table;
         private string _connectionString;
-        private string _tableName;
-        private bool _initialized = false;
-        private object _lock = new object();
-        
+        private string _tableName;        
 
         public CosmosDBTableOutputCacheRepository(NameValueCollection providerConfig, NameValueCollection appSettings)
         {
@@ -43,19 +41,32 @@ namespace Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider
             {
                 throw new ConfigurationErrorsException(SR.TableName_cant_be_empty);
             }
+
+            EnsureTableInitialized();
         }
 
         public object Add(string key, object entry, DateTime utcExpiry)
         {
-            return AddAsync(key, entry, utcExpiry).ConfigureAwait(false).GetAwaiter().GetResult();
+            var retrieveOp = TableOperationHelper.Retrieve(key);
+            var retrieveResult = _table.Execute(retrieveOp);
+            var existingCacheEntry = retrieveResult.Result as CacheEntity;
+
+            if (existingCacheEntry != null && existingCacheEntry.UtcExpiry > DateTime.UtcNow)
+            {
+                return existingCacheEntry.CacheItem;
+            }
+            else
+            {
+                Set(key, entry, utcExpiry);
+                return entry;
+            }
         }
 
         public async Task<object> AddAsync(string key, object entry, DateTime utcExpiry)
         {
-            await EnsureTableInitializedAsync();
             // If there is already a value in the cache for the specified key, the provider must return that value if not expired 
             // and must not store the data passed by using the Add method parameters. 
-            var retrieveOp = TableOperationWrapper.Retrieve(key);
+            var retrieveOp = TableOperationHelper.Retrieve(key);
             var retrieveResult = await _table.ExecuteAsync(retrieveOp);
             var existingCacheEntry = retrieveResult.Result as CacheEntity;
 
@@ -72,16 +83,25 @@ namespace Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider
 
         public object Get(string key)
         {
-            return GetAsync(key).ConfigureAwait(false).GetAwaiter().GetResult();
+            var retrieveOp = TableOperationHelper.Retrieve(key);
+            var retrieveResult = _table.Execute(retrieveOp);
+            var existingCacheEntry = retrieveResult.Result as CacheEntity;
+
+            if (existingCacheEntry != null && existingCacheEntry.UtcExpiry < DateTime.UtcNow)
+            {
+                Remove(key);
+                return null;
+            }
+            else
+            {
+                return existingCacheEntry?.CacheItem;
+            }
         }
 
         public async Task<object> GetAsync(string key)
         {
-            await EnsureTableInitializedAsync();
-
-            var retrieveOp = TableOperationWrapper.Retrieve(key);
+            var retrieveOp = TableOperationHelper.Retrieve(key);
             var retrieveResult = await _table.ExecuteAsync(retrieveOp);
-
             var existingCacheEntry = retrieveResult.Result as CacheEntity;
 
             if(existingCacheEntry != null && existingCacheEntry.UtcExpiry < DateTime.UtcNow){
@@ -96,57 +116,44 @@ namespace Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider
 
         public void Remove(string key)
         {
-            RemoveAsync(key).ConfigureAwait(false).GetAwaiter().GetResult();
+            var removeOp = TableOperationHelper.Delete(key);
+            _table.Execute(removeOp);
         }
 
         public async Task RemoveAsync(string key)
         {
-            await EnsureTableInitializedAsync();
-
-            var removeOp = TableOperationWrapper.Delete(key);
-            
+            var removeOp = TableOperationHelper.Delete(key);            
             await _table.ExecuteAsync(removeOp);
         }
 
         public void Set(string key, object entry, DateTime utcExpiry)
         {
-            SetAsync(key, entry, utcExpiry).ConfigureAwait(false).GetAwaiter().GetResult();
+            var insertOp = TableOperationHelper.InsertOrReplace(key, entry, utcExpiry);
+            _table.Execute(insertOp);
         }
 
         public async Task SetAsync(string key, object entry, DateTime utcExpiry)
         {
-            await EnsureTableInitializedAsync();
-
             //Check if the key is already in database
             //If there is already a value in the cache for the specified key, the Set method will update it. 
             //Otherwise it will insert the entry.
-            var insertOp = TableOperationWrapper.InsertOrReplace(key, entry, utcExpiry);
+            var insertOp = TableOperationHelper.InsertOrReplace(key, entry, utcExpiry);
             await _table.ExecuteAsync(insertOp);            
         }
 
-        private async Task EnsureTableInitializedAsync()
+        private void EnsureTableInitialized()
         {
-            if(!_initialized)
-            {
-                lock (_lock)
-                {
-                    if(!_initialized)
-                    {
-                        var storageAccount = CreateStorageAccount();
-                        var tableClient = storageAccount.CreateCloudTableClient();
-                        _table = tableClient.GetTableReference(_tableName);
-                    }
-                }
+            var storageAccount = CreateStorageAccount();
+            var tableClient = storageAccount.CreateCloudTableClient();
+            _table = tableClient.GetTableReference(_tableName);
 
-                try
-                {
-                    await _table.CreateIfNotExistsAsync();
-                }
-                catch (StorageException ex)
-                {
-                    throw new HttpException(SR.Fail_to_create_table, ex);
-                }
-                _initialized = true;
+            try
+            {
+                _table.CreateIfNotExists();
+            }
+            catch (StorageException ex)
+            {
+                throw new HttpException(SR.Fail_to_create_table, ex);
             }
         }
 

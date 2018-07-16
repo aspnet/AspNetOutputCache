@@ -1,11 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license. See the License.txt file in the project root for full license information.
 
 namespace Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider
 {
+    using System;
+    using System.Threading.Tasks;
+
     interface ITableOutputCacheRepository
     {
         Task<object> AddAsync(string key, object entry, DateTime utcExpiry);

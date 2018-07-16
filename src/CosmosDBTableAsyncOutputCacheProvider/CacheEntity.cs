@@ -1,15 +1,16 @@
-﻿using Microsoft.Azure.CosmosDB.Table;
-using Microsoft.Azure.Storage;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Text;
-using System.Threading.Tasks;
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license. See the License.txt file in the project root for full license information.
 
 namespace Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider
 {
+    using Microsoft.Azure.CosmosDB.Table;
+    using Microsoft.Azure.Storage;
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Runtime.Serialization.Formatters.Binary;
+    using System.Text;
+
     class CacheEntity : TableEntity
     {
         private static readonly char[] InvalidCharsInResource = {'/', '\\', '?', '#'};

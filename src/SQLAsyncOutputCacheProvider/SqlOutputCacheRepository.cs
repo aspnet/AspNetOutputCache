@@ -83,7 +83,7 @@ namespace Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider {
 
         internal bool IsUsingInMemoryTable { get; private set; }
 
-        internal static Func<string, string> GetConnectString = 
+        internal static Func<string, string> GetConnectString =
             (connectionStrName) => ConfigurationManager.ConnectionStrings[connectionStrName]?.ConnectionString;
         #endregion
 
@@ -121,8 +121,7 @@ namespace Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider {
             //Otherwise it will insert the entry.
             if (await DoesKeyExistAsync(key)) {
                 await UpdateEntryAsync(key, entry, utcExpiry);
-            }
-            else {
+            } else {
                 await InsertEntryAsync(key, entry, utcExpiry);
             }
         }
@@ -170,18 +169,15 @@ namespace Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider {
             //Otherwise it will insert the entry.
             if (DoesKeyExist(key)) {
                 UpdateEntry(key, entry, utcExpiry);
-            }
-            else {
+            } else {
                 InsertEntry(key, entry, utcExpiry);
             }
         }
         #endregion
-        
+
         #region private Async Methods
         private async Task RemoveEntryAsync(string key) {
-            using (var cmd = new SqlCommand()) {
-                cmd.CommandText = $@"DELETE FROM {TableName} WHERE [Key] = @key";
-                cmd.Parameters.AddWithValue("key", key);
+            using (var cmd = CreateRemoveEntryCommand(key)) {
                 using (var connection = new SqlConnection(ConnectionString)) {
                     await SqlExecuteNonQueryAsync(connection, cmd);
                 }
@@ -189,9 +185,7 @@ namespace Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider {
         }
 
         private async Task<bool> DoesKeyExistAsync(string key) {
-            using (var cmd = new SqlCommand()) {
-                cmd.CommandText = $@"SELECT [Key] FROM {TableName} WHERE [Key] = @key";
-                cmd.Parameters.AddWithValue("key", key);
+            using (var cmd = CreateDoesKeyExistCommand(key)) {
                 using (var connection = new SqlConnection(ConnectionString)) {
                     using (var reader = await SqlExecuteReaderAsync(connection, cmd)) {
                         if (await reader.ReadAsync()) {
@@ -204,11 +198,7 @@ namespace Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider {
         }
 
         private async Task UpdateEntryAsync(string key, object entry, DateTime utcExpiry) {
-            using (var cmd = new SqlCommand()) {
-                cmd.CommandText = $@"UPDATE {TableName} SET [Value] = @value,[UtcExpiry]=@utcExpiry WHERE [Key] = @key";
-                cmd.Parameters.AddWithValue("key", key);
-                cmd.Parameters.AddWithValue("value", BinarySerializer.Serialize(entry));
-                cmd.Parameters.AddWithValue("utcExpiry", utcExpiry.ToUniversalTime());
+            using (var cmd = CreateUpdateEntryCommand(key, entry, utcExpiry)) {
                 using (var connection = new SqlConnection(ConnectionString)) {
                     await SqlExecuteNonQueryAsync(connection, cmd);
                 }
@@ -216,11 +206,7 @@ namespace Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider {
         }
 
         private async Task<object> InsertEntryAsync(string key, object entry, DateTime utcExpiry) {
-            using (var cmd = new SqlCommand()) {
-                cmd.CommandText = $@"INSERT INTO {TableName} ([Key], [Value], [UtcExpiry]) VALUES (@key, @value, @utcExpiry)";
-                cmd.Parameters.AddWithValue("key", key);
-                cmd.Parameters.AddWithValue("value", BinarySerializer.Serialize(entry));
-                cmd.Parameters.AddWithValue("utcExpiry", utcExpiry.ToUniversalTime());
+            using (var cmd = CreateInsertEntryCommand(key, entry, utcExpiry)) {
                 using (var connection = new SqlConnection(ConnectionString)) {
                     await SqlExecuteNonQueryAsync(connection, cmd);
                 }
@@ -229,9 +215,7 @@ namespace Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider {
         }
 
         private async Task<object> GetNonExpiredEntryAsync(string key) {
-            using (var cmd = new SqlCommand()) {
-                cmd.CommandText = $@"SELECT * FROM {TableName} WHERE [Key] = @key";
-                cmd.Parameters.AddWithValue("key", key);
+            using (var cmd = CreateGetNonExpiredEntryCommand(key)) {
                 using (var connection = new SqlConnection(ConnectionString)) {
                     using (var reader = await SqlExecuteReaderAsync(connection, cmd)) {
                         if (await reader.ReadAsync()) {
@@ -248,76 +232,187 @@ namespace Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider {
         private static async Task OpenConnectionAsync(SqlConnection sqlConnection) {
             try {
                 if (sqlConnection.State != ConnectionState.Open) {
-                    await sqlConnection.OpenAsync().ConfigureAwait(false);
+                    await sqlConnection.OpenAsync();
                 }
             } catch (SqlException e) {
-                if (e != null &&
-                    (e.Number == SQL_LOGIN_FAILED ||
-                     e.Number == SQL_LOGIN_FAILED_2 ||
-                     e.Number == SQL_LOGIN_FAILED_3)) {
-                    string user;
-
-                    SqlConnectionStringBuilder scsb = new SqlConnectionStringBuilder(sqlConnection.ConnectionString);
-                    if (scsb.IntegratedSecurity) {
-                        user = WindowsIdentity.GetCurrent().Name;
-                    } else {
-                        user = scsb.UserID;
-                    }
-
-                    throw new HttpException(string.Format(SR.Login_failed_sql_session_database, user), e);
-                }
+                HandleOpenConnectionException(e, sqlConnection);
             } catch (Exception e) {
                 // just throw, we have a different Exception
                 throw new HttpException(SR.Cant_connect_sql_session_database, e);
             }
         }
 
+        private static void HandleOpenConnectionException(SqlException e, SqlConnection sqlConnection) {
+            if (e != null &&
+                    (e.Number == SQL_LOGIN_FAILED ||
+                     e.Number == SQL_LOGIN_FAILED_2 ||
+                     e.Number == SQL_LOGIN_FAILED_3)) {
+                string user;
+
+                SqlConnectionStringBuilder scsb = new SqlConnectionStringBuilder(sqlConnection.ConnectionString);
+                if (scsb.IntegratedSecurity) {
+                    user = WindowsIdentity.GetCurrent().Name;
+                } else {
+                    user = scsb.UserID;
+                }
+
+                throw new HttpException(string.Format(SR.Login_failed_sql_session_database, user), e);
+            }
+        }
+
         private static async Task<SqlDataReader> SqlExecuteReaderAsync(SqlConnection connection, SqlCommand sqlCmd) {
             sqlCmd.Connection = connection;
 
-            await OpenConnectionAsync(connection).ConfigureAwait(false);
-            return await sqlCmd.ExecuteReaderAsync().ConfigureAwait(false);
+            await OpenConnectionAsync(connection);
+            return await sqlCmd.ExecuteReaderAsync();
         }
 
 
         private static async Task SqlExecuteNonQueryAsync(SqlConnection connection, SqlCommand sqlCommand) {
             sqlCommand.Connection = connection;
 
-            await OpenConnectionAsync(connection).ConfigureAwait(false);
-            await sqlCommand.ExecuteNonQueryAsync().ConfigureAwait(false);
+            await OpenConnectionAsync(connection);
+            await sqlCommand.ExecuteNonQueryAsync();
         }
         #endregion
-
-
+        
         #region private Sync Methods
         private object GetNonExpiredEntry(string key) {
-            return GetNonExpiredEntryAsync(key).GetAwaiter().GetResult();
+            using (var cmd = CreateGetNonExpiredEntryCommand(key)) {
+                using (var connection = new SqlConnection(ConnectionString)) {
+                    using (var reader = SqlExecuteReader(connection, cmd)) {
+                        if (reader.Read()) {
+                            if ((DateTime)reader["UtcExpiry"] > DateTime.Now.ToUniversalTime()) {
+                                return BinarySerializer.Deserialize((byte[])reader["Value"]);
+                            }
+                        }
+                    }
+                }
+            }
+            return null;
         }
 
         private object InsertEntry(string key, object entry, DateTime utcExpiry) {
-            return InsertEntryAsync(key, entry, utcExpiry).GetAwaiter().GetResult();
+            using (var cmd = CreateInsertEntryCommand(key, entry, utcExpiry)) {
+                using (var connection = new SqlConnection(ConnectionString)) {
+                    SqlExecuteNonQuery(connection, cmd);
+                }
+                return entry;
+            }
         }
 
         private bool DoesKeyExist(string key) {
-            return DoesKeyExistAsync(key).GetAwaiter().GetResult();
+            using (var cmd = CreateDoesKeyExistCommand(key)) {
+                using (var connection = new SqlConnection(ConnectionString)) {
+                    using (var reader = SqlExecuteReader(connection, cmd)) {
+                        if (reader.Read()) {
+                            return true;
+                        }
+                        return false;
+                    }
+                }
+            }
         }
 
         private void RemoveEntry(string key) {
-            RemoveEntryAsync(key).GetAwaiter().GetResult();
+            using (var cmd = CreateRemoveEntryCommand(key)) {
+                using (var connection = new SqlConnection(ConnectionString)) {
+                    SqlExecuteNonQuery(connection, cmd);
+                }
+            }
         }
 
         private void UpdateEntry(string key, object entry, DateTime utcExpiry) {
-            UpdateEntryAsync(key, entry, utcExpiry).GetAwaiter().GetResult();
+            using (var cmd = CreateUpdateEntryCommand(key, entry, utcExpiry)) {
+                using (var connection = new SqlConnection(ConnectionString)) {
+                    SqlExecuteNonQuery(connection, cmd);
+                }
+            }
         }
 
         private void CreateTableIfNotExists(string createTableSql) {
             using (var cmd = new SqlCommand()) {
                 cmd.CommandText = createTableSql;
                 using (var connection = new SqlConnection(ConnectionString)) {
-                    SqlExecuteNonQueryAsync(connection, cmd).GetAwaiter().GetResult();
+                    SqlExecuteNonQuery(connection, cmd);
                 }
             }
         }
+
+        private static SqlDataReader SqlExecuteReader(SqlConnection connection, SqlCommand sqlCmd) {
+            sqlCmd.Connection = connection;
+
+            OpenConnection(connection);
+            return sqlCmd.ExecuteReader();
+        }
+
+        private static void SqlExecuteNonQuery(SqlConnection connection, SqlCommand sqlCommand) {
+            sqlCommand.Connection = connection;
+
+            OpenConnection(connection);
+            sqlCommand.ExecuteNonQuery();
+        }
+
+        private static void OpenConnection(SqlConnection sqlConnection) {
+            try {
+                if (sqlConnection.State != ConnectionState.Open) {
+                    sqlConnection.Open();
+                }
+            } catch (SqlException e) {
+                HandleOpenConnectionException(e, sqlConnection);
+            } catch (Exception e) {
+                // just throw, we have a different Exception
+                throw new HttpException(SR.Cant_connect_sql_session_database, e);
+            }
+        }
+        #endregion
+
+        #region private SqlCommand creating methods
+        private SqlCommand CreateRemoveEntryCommand(string key) {
+            var cmd = new SqlCommand();
+            cmd.CommandText = $@"DELETE FROM {TableName} WHERE [Key] = @key";
+            cmd.Parameters.AddWithValue("key", key);
+
+            return cmd;
+        }
+
+        private SqlCommand CreateDoesKeyExistCommand(string key) {
+            var cmd = new SqlCommand();
+            cmd.CommandText = $@"SELECT [Key] FROM {TableName} WHERE [Key] = @key";
+            cmd.Parameters.AddWithValue("key", key);
+
+            return cmd;
+        }
+
+        private SqlCommand CreateUpdateEntryCommand(string key, object entry, DateTime utcExpiry) {
+            var cmd = new SqlCommand();
+            cmd.CommandText = $@"UPDATE {TableName} SET [Value] = @value,[UtcExpiry]=@utcExpiry WHERE [Key] = @key";
+            cmd.Parameters.AddWithValue("key", key);
+            cmd.Parameters.AddWithValue("value", BinarySerializer.Serialize(entry));
+            cmd.Parameters.AddWithValue("utcExpiry", utcExpiry.ToUniversalTime());
+
+            return cmd;
+        }
+
+
+        private SqlCommand CreateInsertEntryCommand(string key, object entry, DateTime utcExpiry) {
+            var cmd = new SqlCommand();
+            cmd.CommandText = $@"INSERT INTO {TableName} ([Key], [Value], [UtcExpiry]) VALUES (@key, @value, @utcExpiry)";
+            cmd.Parameters.AddWithValue("key", key);
+            cmd.Parameters.AddWithValue("value", BinarySerializer.Serialize(entry));
+            cmd.Parameters.AddWithValue("utcExpiry", utcExpiry.ToUniversalTime());
+
+            return cmd;
+        }
+
+        private SqlCommand CreateGetNonExpiredEntryCommand(string key) {
+            var cmd = new SqlCommand();
+            cmd.CommandText = $@"SELECT * FROM {TableName} WHERE [Key] = @key";
+            cmd.Parameters.AddWithValue("key", key);
+
+            return cmd;
+        }
+
         #endregion
     }
 }

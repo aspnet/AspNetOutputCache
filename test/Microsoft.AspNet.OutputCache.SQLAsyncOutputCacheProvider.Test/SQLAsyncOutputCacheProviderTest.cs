@@ -25,7 +25,7 @@ namespace Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.Test {
             var provider = CreateAndInitProvider(repoMoq.Object);
             var result = await provider.AddAsync(TestKey, TestEntry, TestExpiry);
 
-            Assert.Equal(TestEntry, TestEntry);
+            Assert.Equal(TestEntry, result);
         }
 
         [Fact]
@@ -38,7 +38,7 @@ namespace Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.Test {
             var provider = CreateAndInitProvider(repoMoq.Object);
             var result = await provider.AddAsync(TestKey, TestEntry, policy);
 
-            Assert.Equal(TestEntry, TestEntry);
+            Assert.Equal(TestEntry, result);
         }
 
         [Fact]
@@ -108,7 +108,7 @@ namespace Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.Test {
             var provider = CreateAndInitProvider(repoMoq.Object);
             var result = provider.Add(TestKey, TestEntry, TestExpiry);
 
-            Assert.Equal(TestEntry, TestEntry);
+            Assert.Equal(TestEntry, result);
         }
 
         [Fact]

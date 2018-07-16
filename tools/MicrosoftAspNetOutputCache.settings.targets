@@ -2,18 +2,16 @@
   <PropertyGroup>
     <CustomBeforeProjectTargets>$(MSBuildThisFileDirectory)MicrosoftAspNetOutputCache.Extensions.settings.targets</CustomBeforeProjectTargets>
   </PropertyGroup>
+  <PropertyGroup>
+    <RepositoryRoot Condition="'$(RepositoryRoot)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Microsoft.Aspnet.OutputCache.sln))\</RepositoryRoot>
+    <SolutionDir>$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Microsoft.Aspnet.OutputCache.sln))\</SolutionDir>
+  </PropertyGroup>
+
   <Import Project="$(RepositoryRoot)\packages\microbuild.core.0.3.0\build\MicroBuild.Core.props" 
       Condition="Exists('$(RepositoryRoot)\packages\microbuild.core.0.3.0\build\MicroBuild.Core.props')" />
   <Import Project="$(RepositoryRoot)\packages\microbuild.core.0.3.0\build\MicroBuild.Core.targets" 
       Condition="Exists('$(RepositoryRoot)\packages\microbuild.core.0.3.0\build\MicroBuild.Core.targets')" />
   <Import Project="$(CustomBeforeProjectTargets)" Condition="Exists('$(CustomBeforeProjectTargets)')" Label="Pre-targets Build Extensibility Point"/>
-
-  <!-- Default properties -->
-
-  <PropertyGroup>
-    <RepositoryRoot Condition="'$(RepositoryRoot)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Microsoft.Aspnet.OutputCache.sln))\</RepositoryRoot>
-    <SolutionDir>$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Microsoft.Aspnet.OutputCache.sln))\</SolutionDir>
-  </PropertyGroup>
 
   <PropertyGroup Label="Common Configuration">
     <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
@@ -39,9 +37,9 @@
     <CustomAfterNuGetProjTargets>$(CustomAfterMicrosoftCommonTargets)</CustomAfterNuGetProjTargets>
   </PropertyGroup>
       
-  <Target Name="AddSigningInfo" AfterTargets="AfterBuild">
+  <Target Name="AddSigningInfo" BeforeTargets="SignFiles">
     <PropertyGroup>
-      <OutDir>$(PackageOutputDir)</OutDir>
+      <OutDir Condition="'$(OutDir)' == ''">$(PackageOutputDir)</OutDir>
     </PropertyGroup>
     <ItemGroup>
       <FilesToSign Include="$(NuGetPackTargetFile)" Condition="'$(SignAssembly)' == 'true'">

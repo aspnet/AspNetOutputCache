@@ -1,6 +1,4 @@
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="tools\MicrosoftAspNetOutputCache.settings.targets"/>
- 
   <ItemGroup>
     <AssemblyProject Include="src\OutputCacheModuleAsync\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.csproj" />
     <AssemblyProject Include="src\SQLAsyncOutputCacheProvider\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.csproj" />

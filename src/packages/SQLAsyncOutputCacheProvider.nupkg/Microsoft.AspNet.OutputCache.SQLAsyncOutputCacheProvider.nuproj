@@ -5,6 +5,7 @@
         <AssemblyName>$(MSBuildProjectName)</AssemblyName>
         <NuGetPackageId>$(MSBuildProjectName)</NuGetPackageId>
         <NuSpecFile>Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.nuspec</NuSpecFile>
+        <IsPackage>true</IsPackage>
     </PropertyGroup>
     <ItemGroup>
         <NuGetContent Include="$(AssemblyName).dll">

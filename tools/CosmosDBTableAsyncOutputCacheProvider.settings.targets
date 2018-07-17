@@ -10,7 +10,7 @@
   </PropertyGroup>
   <PropertyGroup Label="NuGet package dependencies">
     <OutputCacheModuleAsyncNuGetPackageVersion>1.0.1</OutputCacheModuleAsyncNuGetPackageVersion>
-    <CosmosDBTableNuGetPackageVersion>1.1.2</CosmosDBTableNuGetPackageVersion>
+    <CosmosDBTableNuGetPackageVersion>1.1.0</CosmosDBTableNuGetPackageVersion>
   </PropertyGroup>
   <Target Name="SetNuSpecProperties">
     <PropertyGroup>

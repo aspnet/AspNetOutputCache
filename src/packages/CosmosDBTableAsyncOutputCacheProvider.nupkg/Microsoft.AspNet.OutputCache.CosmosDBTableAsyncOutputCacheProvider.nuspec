@@ -16,6 +16,7 @@
     <language>en-US</language>
     <projectUrl>http://www.asp.net/</projectUrl>
     <licenseUrl>http://www.microsoft.com/web/webpi/eula/net_library_eula_ENU.htm</licenseUrl>
+    <iconUrl>http://go.microsoft.com/fwlink/?LinkID=288859</iconUrl>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <tags>ASP.NET CosmosDB Azure Storage Table Async OutputCache Provider</tags>
   </metadata>

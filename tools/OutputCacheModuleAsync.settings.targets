@@ -5,7 +5,7 @@
     <VersionStartYear>2016</VersionStartYear>
     <VersionMajor>1</VersionMajor>
     <VersionMinor>0</VersionMinor>
-    <VersionRelease>1</VersionRelease>
+    <VersionRelease>2</VersionRelease>
   </PropertyGroup>
   <Target Name="SetNuSpecProperties">
     <PropertyGroup>

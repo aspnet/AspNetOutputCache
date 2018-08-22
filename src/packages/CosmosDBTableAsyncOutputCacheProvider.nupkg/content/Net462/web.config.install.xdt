@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">
+  <system.web>
+    <caching>
+	 <outputCache xdt:Transform="Remove">
+	 </outputCache>
+    </caching>
+  </system.web>
+    <appSettings xdt:Transform="InsertIfMissing">
+  </appSettings>
+  <appSettings>
+    <add key="StorageConnectionStringForOutputCacheProvider" xdt:Transform="Remove" xdt:Locator="Match(key)" />
+    <add key="StorageConnectionStringForOutputCacheProvider" value="[StorageConnectionString]" xdt:Transform="Insert" />
+  </appSettings>
+ <system.web>
+     <caching xdt:Transform="InsertIfMissing">
+      <outputCache defaultProvider="CosmosDBTableAsyncOutputCacheProvider" xdt:Transform="InsertIfMissing"> 
+        <providers>
+        <!--
+            Please change the connection string named "DefaultConnection" to connect to an instance
+            of SQL Server which you will use as the data store.
+        -->
+          <add name="CosmosDBTableAsyncOutputCacheProvider" connectionStringName="StorageConnectionStringForOutputCacheProvider" tableName="[TableName]"
+              type="Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider.CosmosDBTableAsyncOutputCacheProvider, Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" 
+                 xdt:Transform="InsertIfMissing"/>
+        </providers>
+      </outputCache>
+    </caching>
+  </system.web>
+</configuration>

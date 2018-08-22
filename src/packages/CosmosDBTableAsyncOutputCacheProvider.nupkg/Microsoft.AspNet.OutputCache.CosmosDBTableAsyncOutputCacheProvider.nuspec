@@ -8,15 +8,16 @@
     <copyright>&#169; Microsoft Corporation. All rights reserved.</copyright>
     <dependencies>
       <dependency id="Microsoft.AspNet.OutputCache.OutputCacheModuleAsync" version="$OutputCacheModuleAsyncNuGetPackageVersion$" />
+      <dependency id="Microsoft.Azure.CosmosDB.Table" version="$CosmosDBTableNuGetPackageVersion$" />
     </dependencies>
-    <title>Microsoft ASP.NET SQL Async OutputCache Provider</title>
-    <description>Async version SQL OutputCache Provider</description>
-    <summary>Async version SQL OutputCache Provider</summary>
+    <title>Microsoft ASP.NET CosmosDB Table Async OutputCache Provider</title>
+    <description>In .Net 4.6.2, asp.net enables developer plug in async version of OutputCache module which is a good fit for the non-in-memory OutputCache data store. This OutputCache provider can use both CosmosDB(table model) and Azure storage table as the data store and leverages async operation to provide better scability.</description>
+    <summary>Async version CosmosDB/Azure Storage Table OutputCache Provider</summary>
     <language>en-US</language>
     <projectUrl>http://www.asp.net/</projectUrl>
     <licenseUrl>http://www.microsoft.com/web/webpi/eula/net_library_eula_ENU.htm</licenseUrl>
     <iconUrl>http://go.microsoft.com/fwlink/?LinkID=288859</iconUrl>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
-    <tags>ASP.NET SQL Async OutputCache Provider</tags>
+    <tags>ASP.NET CosmosDB Azure Storage Table Async OutputCache Provider</tags>
   </metadata>
 </package>

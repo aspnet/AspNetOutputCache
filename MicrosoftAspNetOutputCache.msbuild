@@ -1,13 +1,13 @@
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="tools\MicrosoftAspNetOutputCache.settings.targets"/>
- 
   <ItemGroup>
     <AssemblyProject Include="src\OutputCacheModuleAsync\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.csproj" />
     <AssemblyProject Include="src\SQLAsyncOutputCacheProvider\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.csproj" />
+    <AssemblyProject Include="src\CosmosDBTableAsyncOutputCacheProvider\Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider.csproj" />
   </ItemGroup>
   <ItemGroup>
     <TestProject Include="test\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.Test\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.Test.csproj" />
     <TestProject Include="test\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test.csproj" />
+    <TestProject Include="test\Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider.Test\Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider.Test.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageProject Include="src\Packages\Packages.csproj" />

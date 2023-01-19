@@ -24,6 +24,9 @@
         <NuGetContent Include="Content\Net462\*">
             <Destination>content\Net462</Destination>
         </NuGetContent>
+        <NuGetContent Include="$(RepositoryRoot)\docs\SQLAsyncOutputCacheProvider.md">
+          <Destination>docs\Readme.md</Destination>
+        </NuGetContent>
     </ItemGroup>
     <Import Project="$(RepositoryRoot)Tools\NuGetProj.targets"/>
 </Project>

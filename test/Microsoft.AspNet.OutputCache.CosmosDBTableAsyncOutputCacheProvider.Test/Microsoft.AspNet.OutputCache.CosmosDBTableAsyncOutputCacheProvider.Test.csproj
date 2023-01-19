@@ -39,6 +39,9 @@
   <PropertyGroup>
     <DelaySign>true</DelaySign>
   </PropertyGroup>
+  <PropertyGroup>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -57,7 +60,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Moq">
-      <Version>4.9.0</Version>
+      <Version>4.18.4</Version>
     </PackageReference>
     <PackageReference Include="xunit">
       <Version>2.3.1</Version>

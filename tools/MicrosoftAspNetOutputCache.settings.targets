@@ -48,9 +48,15 @@
     </ItemGroup>
     <ItemGroup>
       <FilesToSign Include="$(TargetPath)" Condition="'$(SignAssembly)' == 'true'">
-        <Authenticode>Microsoft</Authenticode>
+        <Authenticode>Microsoft400</Authenticode>
         <StrongName>MsSharedLib72</StrongName>
       </FilesToSign>
     </ItemGroup>
   </Target>
+
+  <Target Name="SuperClean" AfterTargets="Clean">
+    <RemoveDir Directories="$(TargetDir)" /> <!-- bin -->
+    <RemoveDir Directories="$(ProjectDir)$(BaseIntermediateOutputPath)" /> <!-- obj -->
+  </Target>
+
 </Project>

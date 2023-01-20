@@ -14,6 +14,7 @@
     <licenseUrl>http://www.microsoft.com/web/webpi/eula/net_library_eula_ENU.htm</licenseUrl>
     <iconUrl>http://go.microsoft.com/fwlink/?LinkID=288859</iconUrl>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <readme>docs\Readme.md</readme>
     <tags>ASP.NET Async OutputCache Module</tags>
   </metadata>
 </package>

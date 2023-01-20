@@ -943,7 +943,10 @@ namespace Microsoft.AspNet.OutputCache {
                 }
                 if (contentLength > 0) {
                     using (var ms = new MemoryStream()) {
+                        // request.InputStream always returns CanSeek == true, so we can restore position like this
+                        var pos = request.InputStream.Position;
                         request.InputStream.CopyTo(ms);
+                        request.InputStream.Position = pos;
                         byte[] buf = ms.ToArray();
                         // Use SHA256 to generate a collision-free hash of the input data
                         value = Convert.ToBase64String((CryptoUtil.ComputeHash(buf)));

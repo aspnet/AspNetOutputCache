@@ -4,7 +4,7 @@
     <BuildQuality Condition="'$(BuildQuality)' == ''">rtm</BuildQuality>
     <VersionMajor>1</VersionMajor>
     <VersionMinor>0</VersionMinor>
-    <VersionRelease>2</VersionRelease>
+    <VersionRelease>3</VersionRelease>
   </PropertyGroup>
   <Target Name="SetNuSpecProperties">
     <PropertyGroup>

@@ -40,7 +40,7 @@ namespace Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider {
         }
 
         public object Add(string key, object entry, DateTime utcExpiry) {
-            CacheEntity existingCacheEntry = _tableClient.GetEntity<CacheEntity>(CacheEntity.GeneratePartitionKey(key), CacheEntity.SanitizeKey(key));
+            CacheEntity existingCacheEntry = Get(key) as CacheEntity;
 
             if (existingCacheEntry != null && existingCacheEntry.UtcExpiry > DateTime.UtcNow) {
                 return existingCacheEntry.CacheItem;
@@ -53,7 +53,7 @@ namespace Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider {
         public async Task<object> AddAsync(string key, object entry, DateTime utcExpiry) {
             // If there is already a value in the cache for the specified key, the provider must return that value if not expired 
             // and must not store the data passed by using the Add method parameters. 
-            CacheEntity existingCacheEntry = await _tableClient.GetEntityAsync<CacheEntity>(CacheEntity.GeneratePartitionKey(key), CacheEntity.SanitizeKey(key));
+            CacheEntity existingCacheEntry = await GetAsync(key) as CacheEntity;
 
             if (existingCacheEntry != null && existingCacheEntry.UtcExpiry > DateTime.UtcNow) {
                 return existingCacheEntry.CacheItem;
@@ -64,29 +64,40 @@ namespace Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider {
         }
 
         public object Get(string key) {
-            CacheEntity existingCacheEntry = _tableClient.GetEntity<CacheEntity>(CacheEntity.GeneratePartitionKey(key), CacheEntity.SanitizeKey(key));
+            try
+            {
+                CacheEntity existingCacheEntry = _tableClient.GetEntity<CacheEntity>(CacheEntity.GeneratePartitionKey(key), CacheEntity.SanitizeKey(key));
 
-            if (existingCacheEntry != null && existingCacheEntry.UtcExpiry < DateTime.UtcNow) {
-                Remove(key);
-                return null;
-            } else {
-                return existingCacheEntry?.CacheItem;
+                if (existingCacheEntry != null && existingCacheEntry.UtcExpiry < DateTime.UtcNow) {
+                    Remove(key);
+                    return null;
+                } else {
+                    return existingCacheEntry?.CacheItem;
+                }
             }
+            catch (RequestFailedException rfe) when (rfe.Status == 404) { /* Entity not found */ }
+            return null;
         }
 
         public async Task<object> GetAsync(string key) {
-            // Outputcache module will always first call GetAsync
-            // so only calling EnsureTableInitializedAsync here is good enough
-            await EnsureTableInitializedAsync();
 
-            CacheEntity existingCacheEntry = await _tableClient.GetEntityAsync<CacheEntity>(CacheEntity.GeneratePartitionKey(key), CacheEntity.SanitizeKey(key));
+            try
+            {
+                // Outputcache module will always first call GetAsync
+                // so only calling EnsureTableInitializedAsync here is good enough
+                await EnsureTableInitializedAsync();
 
-            if (existingCacheEntry != null && existingCacheEntry.UtcExpiry < DateTime.UtcNow) {
-                await RemoveAsync(key);
-                return null;
-            } else {
-                return existingCacheEntry?.CacheItem;
+                CacheEntity existingCacheEntry = await _tableClient.GetEntityAsync<CacheEntity>(CacheEntity.GeneratePartitionKey(key), CacheEntity.SanitizeKey(key));
+
+                if (existingCacheEntry != null && existingCacheEntry.UtcExpiry < DateTime.UtcNow) {
+                    await RemoveAsync(key);
+                    return null;
+                } else {
+                    return existingCacheEntry?.CacheItem;
+                }
             }
+            catch (RequestFailedException rfe) when (rfe.Status == 404) { /* Entity not found */ }
+            return null;
         }
 
         public void Remove(string key) {

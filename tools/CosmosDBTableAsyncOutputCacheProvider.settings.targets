@@ -4,12 +4,12 @@
   <PropertyGroup>
     <BuildQuality Condition="'$(BuildQuality)' == ''">rtm</BuildQuality>
     <VersionMajor>1</VersionMajor>
-    <VersionMinor>0</VersionMinor>
+    <VersionMinor>2</VersionMinor>
     <VersionRelease>0</VersionRelease>
   </PropertyGroup>
   <PropertyGroup Label="NuGet package dependencies">
     <OutputCacheModuleAsyncNuGetPackageVersion>1.0.2</OutputCacheModuleAsyncNuGetPackageVersion>
-    <CosmosDBTableNuGetPackageVersion>1.1.0</CosmosDBTableNuGetPackageVersion>
+    <AzureTablesNuGetPackageVersion>12.2.0</AzureTablesNuGetPackageVersion>
   </PropertyGroup>
   <Target Name="SetNuSpecProperties">
     <PropertyGroup>
@@ -17,7 +17,7 @@
         NuGetPackageVersion=$(NuGetPackageVersion); 
         NuGetPackageId=$(NuGetPackageId); 
         OutputCacheModuleAsyncNuGetPackageVersion=$(OutputCacheModuleAsyncNuGetPackageVersion);
-        CosmosDBTableNuGetPackageVersion=$(CosmosDBTableNuGetPackageVersion);
+        AzureTablesNuGetPackageVersion=$(AzureTablesNuGetPackageVersion);
       </NuSpecProperties>
     </PropertyGroup>
   </Target>

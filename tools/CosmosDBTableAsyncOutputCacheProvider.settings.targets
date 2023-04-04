@@ -4,7 +4,7 @@
   <PropertyGroup>
     <BuildQuality Condition="'$(BuildQuality)' == ''">rtm</BuildQuality>
     <VersionMajor>1</VersionMajor>
-    <VersionMinor>2</VersionMinor>
+    <VersionMinor>1</VersionMinor>
     <VersionRelease>0</VersionRelease>
   </PropertyGroup>
   <PropertyGroup Label="NuGet package dependencies">

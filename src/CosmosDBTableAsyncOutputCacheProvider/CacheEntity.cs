@@ -22,7 +22,7 @@ namespace Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider {
             RowKey = SanitizeKey(cacheKey);
             PartitionKey = GeneratePartitionKey(cacheKey);
             CacheItem = cacheItem;
-            UtcExpiry = utcExpiry;
+            UtcExpiry = utcExpiry.ToUniversalTime();
         }
 
         [IgnoreDataMember]

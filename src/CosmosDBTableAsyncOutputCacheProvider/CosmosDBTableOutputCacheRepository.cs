@@ -101,11 +101,11 @@ namespace Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider {
         }
 
         public void Remove(string key) {
-            _tableClient.DeleteEntity(key, null, ETag.All);
+            _tableClient.DeleteEntity(CacheEntity.GeneratePartitionKey(key), CacheEntity.SanitizeKey(key), ETag.All);
         }
 
         public async Task RemoveAsync(string key) {
-            await _tableClient.DeleteEntityAsync(key, null, ETag.All);
+            await _tableClient.DeleteEntityAsync(CacheEntity.GeneratePartitionKey(key), CacheEntity.SanitizeKey(key), ETag.All);
         }
 
         public void Set(string key, object entry, DateTime utcExpiry) {

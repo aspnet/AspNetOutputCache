@@ -21,7 +21,7 @@
             of SQL Server which you will use as the data store.
         -->
           <add name="CosmosDBTableAsyncOutputCacheProvider" connectionStringName="StorageConnectionStringForOutputCacheProvider" tableName="[TableName]"
-              type="Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider.CosmosDBTableAsyncOutputCacheProvider, Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" 
+              type="Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider.CosmosDBTableAsyncOutputCacheProvider, Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider, Version=1.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" 
                  xdt:Transform="InsertIfMissing"/>
         </providers>
       </outputCache>

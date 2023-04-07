@@ -2,15 +2,16 @@
 // Licensed under the MIT license. See the License.txt file in the project root for full license information.
 
 namespace Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider {
-    using Microsoft.Azure.CosmosDB.Table;
-    using Microsoft.Azure.Storage;
+    using Azure;
+    using Azure.Data.Tables;
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Runtime.Serialization;
     using System.Runtime.Serialization.Formatters.Binary;
     using System.Text;
 
-    class CacheEntity : TableEntity {
+    class CacheEntity : ITableEntity {
         private static readonly char[] InvalidCharsInResource = { '/', '\\', '?', '#' };
         private const char ReplacementOfInvalidChars = '_';
 
@@ -21,24 +22,23 @@ namespace Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider {
             RowKey = SanitizeKey(cacheKey);
             PartitionKey = GeneratePartitionKey(cacheKey);
             CacheItem = cacheItem;
-            UtcExpiry = utcExpiry;
+            UtcExpiry = utcExpiry.ToUniversalTime();
         }
 
+        [IgnoreDataMember]
         public object CacheItem { get; set; }
+        [DataMember(Name = "CacheItem")]
+        public byte[] SerializedCacheItem
+        {
+            get => Serialize(CacheItem);
+            set => CacheItem = Deserialize(value);
+        }
 
         public DateTime UtcExpiry { get; set; }
-
-        public override void ReadEntity(IDictionary<string, EntityProperty> properties, OperationContext operationContext) {
-            base.ReadEntity(properties, operationContext);
-            CacheItem = Deserialize(properties[nameof(CacheItem)].BinaryValue);
-        }
-
-        public override IDictionary<string, EntityProperty> WriteEntity(OperationContext operationContext) {
-            var result = base.WriteEntity(operationContext);
-            var cacheItemProperty = new EntityProperty(Serialize(CacheItem));
-            result.Add(nameof(CacheItem), cacheItemProperty);
-            return result;
-        }
+        public string PartitionKey { get; set; }
+        public string RowKey { get; set; }
+        public DateTimeOffset? Timestamp { get; set; }
+        public ETag ETag { get; set; }
 
         public static string GeneratePartitionKey(string cacheKey) {
             return (cacheKey.Length % 10).ToString();

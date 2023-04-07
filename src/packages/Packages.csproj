@@ -24,13 +24,21 @@
   </PropertyGroup>
   <ItemGroup>
     <NuGetProject Include="OutputCacheModuleAsync.nupkg\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.nuproj" />
-    <NuGetProject Include="SQLAsyncOutputCacheProvider.nupkg\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.nuproj" />
-    <NuGetProject Include="CosmosDBTableAsyncOutputCacheProvider.nupkg\Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider.nuproj" />
+    <None Include="OutputCacheModuleAsync.nupkg\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.nuspec" />
+    <None Include="OutputCacheModuleAsync.nupkg\content\Net462\web.config.install.xdt" />
+    <None Include="OutputCacheModuleAsync.nupkg\content\Net462\web.config.uninstall.xdt" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="CosmosDBTableAsyncOutputCacheProvider.nupkg\Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider.nuspec" />
-    <None Include="OutputCacheModuleAsync.nupkg\Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.nuspec" />
+    <NuGetProject Include="SQLAsyncOutputCacheProvider.nupkg\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.nuproj" />
     <None Include="SQLAsyncOutputCacheProvider.nupkg\Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.nuspec" />
+    <None Include="SQLAsyncOutputCacheProvider.nupkg\content\Net462\web.config.install.xdt" />
+    <None Include="SQLAsyncOutputCacheProvider.nupkg\content\Net462\web.config.uninstall.xdt" />
+  </ItemGroup>
+  <ItemGroup>
+    <NuGetProject Include="CosmosDBTableAsyncOutputCacheProvider.nupkg\Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider.nuproj" />
+    <None Include="CosmosDBTableAsyncOutputCacheProvider.nupkg\Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider.nuspec" />
+    <None Include="CosmosDBTableAsyncOutputCacheProvider.nupkg\content\Net462\web.config.install.xdt" />
+    <None Include="CosmosDBTableAsyncOutputCacheProvider.nupkg\content\Net462\web.config.uninstall.xdt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="Build">

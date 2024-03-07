@@ -46,6 +46,8 @@ extends:
           mb:
             signing:
               enabled: true
+              signType: test
+              zipSources: false
           outputs:
           - output: pipelineArtifact
             displayName: 'Publish Artifact: Nuget packages'

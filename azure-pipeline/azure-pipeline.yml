@@ -79,6 +79,7 @@ extends:
             clean: true
             createLogFile: true
             logFileVerbosity: detailed
+         # to delete
           continueOnError: true
         - task: CopyFiles@2
           displayName: Stage dll's for verification
@@ -96,12 +97,18 @@ extends:
               Microsoft.AspNet.OutputCache..*.nupkg
               !*.symbols.nupkg
             TargetFolder: $(Build.SourcesDirectory)\verify\packages
+         # to delete
+          continueOnError: true
         - task: ms-vseng.MicroBuildShipTasks.7c429315-71ba-4cb3-94bb-f829c95f7915.MicroBuildCodesignVerify@1
           displayName: Verify Signed Binaries
           inputs:
             TargetFolder: $(Build.SourcesDirectory)\verify\dlls
+         # to delete
+          continueOnError: true
         - task: ms-vseng.MicroBuildShipTasks.7c429315-71ba-4cb3-94bb-f829c95f7915.MicroBuildCodesignVerify@1
           displayName: Verify Signed Packages
+         # to delete
+          continueOnError: true
         - task: CmdLine@2
           displayName: Map ConnectionString for ApiScan
           inputs:

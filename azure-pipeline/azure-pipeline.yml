@@ -79,6 +79,7 @@ extends:
             clean: true
             createLogFile: true
             logFileVerbosity: detailed
+          continueOnError: true
         - task: CopyFiles@2
           displayName: Stage dll's for verification
           inputs:

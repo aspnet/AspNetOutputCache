@@ -5,11 +5,11 @@
     <BuildQuality Condition="'$(BuildQuality)' == ''">rtm</BuildQuality>
     <VersionMajor>1</VersionMajor>
     <VersionMinor>1</VersionMinor>
-    <VersionRelease>0</VersionRelease>
+    <VersionRelease>1</VersionRelease>
   </PropertyGroup>
   <PropertyGroup Label="NuGet package dependencies">
     <OutputCacheModuleAsyncNuGetPackageVersion>1.0.2</OutputCacheModuleAsyncNuGetPackageVersion>
-    <AzureTablesNuGetPackageVersion>12.2.0</AzureTablesNuGetPackageVersion>
+    <AzureTablesNuGetPackageVersion>12.7.1</AzureTablesNuGetPackageVersion>
   </PropertyGroup>
   <Target Name="SetNuSpecProperties">
     <PropertyGroup>

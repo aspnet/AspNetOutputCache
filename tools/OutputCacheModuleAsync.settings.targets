@@ -2,6 +2,7 @@
 <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory),Microsoft.AspNet.OutputCache.sln))\tools\MicrosoftAspNetOutputCache.settings.targets" />
   <PropertyGroup>
     <BuildQuality Condition="'$(BuildQuality)' == ''">rtm</BuildQuality>
+    <!-- Update version in config.xdt's for major/minor changes. (Don't update for 'release' changes.) -->
     <VersionMajor>1</VersionMajor>
     <VersionMinor>0</VersionMinor>
     <VersionRelease>3</VersionRelease>

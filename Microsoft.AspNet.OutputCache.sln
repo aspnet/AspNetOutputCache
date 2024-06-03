@@ -25,10 +25,17 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Packages", "src\packages\Pa
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{43F85F24-FF0F-4076-845C-863079AF3EC7}"
 	ProjectSection(SolutionItems) = preProject
-		docs\OutputCacheModuleAsync.md = docs\OutputCacheModuleAsync.md
 		docs\CosmosDBTableAsyncOutputCacheProvider.md = docs\CosmosDBTableAsyncOutputCacheProvider.md
+		docs\OutputCacheModuleAsync.md = docs\OutputCacheModuleAsync.md
 		Readme.md = Readme.md
 		docs\SQLAsyncOutputCacheProvider.md = docs\SQLAsyncOutputCacheProvider.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{89D3A859-B18D-4BFE-AA27-83AF9F6C21F3}"
+	ProjectSection(SolutionItems) = preProject
+		tools\CosmosDBTableAsyncOutputCacheProvider.settings.targets = tools\CosmosDBTableAsyncOutputCacheProvider.settings.targets
+		tools\OutputCacheModuleAsync.settings.targets = tools\OutputCacheModuleAsync.settings.targets
+		tools\SQLAsyncOutputCacheProvider.settings.targets = tools\SQLAsyncOutputCacheProvider.settings.targets
 	EndProjectSection
 EndProject
 Global

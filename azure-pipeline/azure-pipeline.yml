@@ -81,7 +81,7 @@ extends:
           inputs:
             solution: MicrosoftAspNetOutputCache.msbuild
             configuration: Release
-            msbuildArguments: /p:GitCommit=%BUILD_SOURCEVERSION% /p:GitCommitLink="https://github.com/aspnet/AspNetWebFormsDependencyInjection/commit/%BUILD_SOURCEVERSION%" /p:SignType=real /p:SignAssembly=true /verbosity:n
+            msbuildArguments: /p:GitCommit=%BUILD_SOURCEVERSION% /p:GitCommitLink="https://github.com/aspnet/AspNetOutputCache/commit/%BUILD_SOURCEVERSION%" /p:SignType=real /p:SignAssembly=true /verbosity:n
             clean: true
             createLogFile: true
             logFileVerbosity: detailed

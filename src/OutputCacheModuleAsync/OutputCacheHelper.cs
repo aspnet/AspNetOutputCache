@@ -1060,7 +1060,7 @@ namespace Microsoft.AspNet.OutputCache {
         }
 
         private async Task InsertResponseAsync(string key, DateTime utcExpires, CachedVary cachedVary, HttpCachePolicySettings settings, string keyRawResponse, TimeSpan slidingDelta) {
-            if (utcExpires > DateTime.Now) {
+            if (utcExpires > DateTime.UtcNow) {
                 // Create the response object to be sent on cache hits.
                 var httpRawResponse = GetSnapshot();
                 string kernelCacheUrl = null;

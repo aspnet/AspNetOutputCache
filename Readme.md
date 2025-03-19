@@ -1,6 +1,12 @@
 ## Introduction
 OutputCacheModule is ASP.NET’s default handler for storing the generated output of pages, controls, and HTTP responses.  This content can then be reused when appropriate to improve performance. Prior to the .NET Framework 4.6.2, the OutputCache Module did not support async read/write to the storage. You can find more details on [this blog post](https://blogs.msdn.microsoft.com/webdev/2016/12/05/introducing-the-asp-net-async-outputcache-module/).
 
+## Key Benefits
+- Asynchronous operations for improved scalability
+- Better performance in high-traffic applications
+- Multiple storage provider options (SQL Server, Azure Cosmos DB)
+- Compatible with existing ASP.NET output cache APIs
+
 ## How to build
 1. Open a [VS developer command prompt](https://docs.microsoft.com/en-us/dotnet/framework/tools/developer-command-prompt-for-vs)
 2. Run build.cmd. This will build Nuget packages and run all the unit tests.

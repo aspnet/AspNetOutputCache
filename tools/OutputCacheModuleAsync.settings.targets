@@ -5,7 +5,7 @@
     <!-- Update version in config.xdt's for major/minor changes. (Don't update for 'release' changes.) -->
     <VersionMajor>1</VersionMajor>
     <VersionMinor>0</VersionMinor>
-    <VersionRelease>3</VersionRelease>
+    <VersionRelease>4</VersionRelease>
   </PropertyGroup>
   <Target Name="SetNuSpecProperties">
     <PropertyGroup>

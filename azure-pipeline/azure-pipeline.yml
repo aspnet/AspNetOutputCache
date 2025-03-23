@@ -112,7 +112,7 @@ extends:
           inputs:
             SourceFolder: $(Build.SourcesDirectory)\bin\Release\Packages
             Contents: |
-              Microsoft.AspNet.OutputCache..*.nupkg
+              Microsoft.AspNet.OutputCache.*.nupkg
               !*.symbols.nupkg
             TargetFolder: $(Build.SourcesDirectory)\verify\packages
             CleanTargetFolder: true
@@ -125,8 +125,8 @@ extends:
         - task: ms-vseng.MicroBuildShipTasks.7c429315-71ba-4cb3-94bb-f829c95f7915.MicroBuildCodesignVerify@1
           displayName: Verify Signed Packages
           inputs:
-                TargetFolder: $(Build.SourcesDirectory)\verify\packages
-                ExcludeFolders: .git MicroBuild decomp *.xml
+            TargetFolder: $(Build.SourcesDirectory)\verify\packages
+            ExcludeFolders: .git MicroBuild decomp *.xml
         # Following article on https://dev.azure.com/devdiv/DevDiv/_wiki/wikis/DevDiv.wiki/25351/APIScan-step-by-step-guide-to-setting-up-a-Pipeline
         # No longer need the old format, and following guideline to use (ApiScanClientId)
         - task: APIScan@2

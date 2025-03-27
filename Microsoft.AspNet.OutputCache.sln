@@ -18,10 +18,18 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider", "src\CosmosDBTableAsyncOutputCacheProvider\Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider.csproj", "{9FDBB781-C469-4D9E-B687-4087CD422B13}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider.Test", "test\Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider.Test\Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider.Test.csproj", "{107EF28E-05AA-485E-A5C1-9A20A6DFE877}"
+	ProjectSection(ProjectDependencies) = postProject
+		{3B446E33-7B1C-4A32-AEB8-92DC6CE94F77} = {3B446E33-7B1C-4A32-AEB8-92DC6CE94F77}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "packages", "packages", "{D7769596-DE12-4BA1-9BE6-67D4D3FEBB51}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Packages", "src\packages\Packages.csproj", "{7EC5863F-7FF1-41C7-A384-8FFF81531E7A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{062FD141-4E51-4943-8C69-385DDE3D2792} = {062FD141-4E51-4943-8C69-385DDE3D2792}
+		{3B446E33-7B1C-4A32-AEB8-92DC6CE94F77} = {3B446E33-7B1C-4A32-AEB8-92DC6CE94F77}
+		{9FDBB781-C469-4D9E-B687-4087CD422B13} = {9FDBB781-C469-4D9E-B687-4087CD422B13}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{43F85F24-FF0F-4076-845C-863079AF3EC7}"
 	ProjectSection(SolutionItems) = preProject
@@ -34,6 +42,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{89D3A859-B18D-4BFE-AA27-83AF9F6C21F3}"
 	ProjectSection(SolutionItems) = preProject
 		tools\CosmosDBTableAsyncOutputCacheProvider.settings.targets = tools\CosmosDBTableAsyncOutputCacheProvider.settings.targets
+		tools\MicrosoftAspNetOutputCache.settings.targets = tools\MicrosoftAspNetOutputCache.settings.targets
 		tools\OutputCacheModuleAsync.settings.targets = tools\OutputCacheModuleAsync.settings.targets
 		tools\SQLAsyncOutputCacheProvider.settings.targets = tools\SQLAsyncOutputCacheProvider.settings.targets
 	EndProjectSection

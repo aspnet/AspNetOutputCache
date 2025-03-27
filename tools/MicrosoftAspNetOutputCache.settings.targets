@@ -13,6 +13,21 @@
       Condition="Exists('$(RepositoryRoot)\packages\microbuild.core.0.3.0\build\MicroBuild.Core.targets')" />
   <Import Project="$(CustomBeforeProjectTargets)" Condition="Exists('$(CustomBeforeProjectTargets)')" Label="Pre-targets Build Extensibility Point"/>
 
+  <PropertyGroup>
+    <!-- Versioning:
+            Major:	'Major' for Assembly, File, Info, and Package.
+            Minor:	'Minor' for Assembly, File, Info, and Package.
+            Build:	Third (auto-generated) for File and Info. (Assembly is always 0)
+            Revision:	'Revision' for Assembly and File. Strategy - Try to leave this 0 and only rev Major/Minor for big changes and Release for non-dependency-breaking changes.
+            Release:	Third for Info and Package.
+         Update package and file without touching assembly, except for major releases.
+
+         Most of the interesting ones are already set in each project's individual settings file.
+    -->
+    <BuildQuality Condition="'$(BuildQuality)' == ''">rtm</BuildQuality>
+    <VersionStartYear Condition="'$(VersionStartYear)' == ''">2025</VersionStartYear>
+  </PropertyGroup>
+
   <PropertyGroup Label="Common Configuration">
     <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
     <OutputPath>$(RepositoryRoot)bin\$(Configuration)\</OutputPath>

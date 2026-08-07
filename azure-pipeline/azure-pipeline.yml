@@ -76,19 +76,23 @@ extends:
           fetchTags: true
           persistCredentials: true
         - task: NuGetToolInstaller@0
-          displayName: Use NuGet 5.4.0
+          displayName: Use NuGet 6.4.0
           inputs:
-            versionSpec: 5.4.0
+            versionSpec: 6.4.0
             checkLatest: true
         - task: NuGetCommand@2
           displayName: NuGet custom
           inputs:
             command: custom
             arguments: install MicroBuild.Core -version 0.3.0 -OutputDirectory .\packages -source https://devdiv.pkgs.visualstudio.com/DefaultCollection/_packaging/MicroBuildToolset/nuget/v3/index.json
+        - task: NuGetAuthenticate@1
         - task: NuGetCommand@2
           displayName: NuGet restore
           inputs:
-            solution: Microsoft.AspNet.OutputCache.sln
+            command: restore
+            restoreSolution: Microsoft.AspNet.OutputCache.sln
+            feedsToUse: config
+            nugetConfigPath: .nuget/NuGet.Config
         - task: MSBuild@1
           displayName: Build solution MicrosoftAspNetOutputCache.msbuild
           inputs:

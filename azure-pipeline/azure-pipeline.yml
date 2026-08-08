@@ -1,32 +1,46 @@
-# This Yaml Document has been converted by ESAI Yaml Pipeline Conversion Tool.
-# Please make sure to check all the converted content, it is your team's responsibility to make sure that the pipeline is still valid and functions as expected.
-# The SBOM tasks have been removed because they are not required for the unofficial template.
-# You can manually enable SBOM in the unofficial template if needed, othewise its automatically enabled when using official template. https://eng.ms/docs/cloud-ai-platform/devdiv/one-engineering-system-1es/1es-docs/1es-pipeline-templates/features/sbom
-# This pipeline will be extended to the MicroBuild template
-# The Task 'PublishBuildArtifacts@1' has been converted to an output named 'Publish Artifact: Nuget packages' in the templateContext section.
 trigger: none
+pr: none
+
+parameters:
+- name: useRealSigning
+  displayName: Use production signing (manual runs only)
+  type: boolean
+  default: true
+
 schedules:
-- cron: "0 0 14 * *"
+- cron: '0 0 14 * *'
+  displayName: Monthly non-production build
   branches:
     include:
     - main
   always: true
+
 resources:
   repositories:
-  - repository: self
-    type: git
-    ref: refs/heads/main
   - repository: MicroBuildTemplate
     type: git
     name: 1ESPipelineTemplates/MicroBuildTemplate
     ref: refs/tags/release
+
 name: $(Date:yyyyMMdd).$(Rev:r)
+
 variables:
-  TeamName: Asp.Net
-  EnableNuGetPackageRestore: true
+- name: TeamName
+  value: Asp.Net
+- name: EnableNuGetPackageRestore
+  value: true
+- name: SignType
+  ${{ if and(eq(variables['Build.Reason'], 'Manual'), eq(parameters.useRealSigning, true)) }}:
+    value: real
+  ${{ else }}:
+    value: test
+
 extends:
   template: azure-pipelines/MicroBuild.1ES.Official.yml@MicroBuildTemplate
   parameters:
+    pool:
+      name: VSEngSS-MicroBuild2022-1ES
+      os: windows
     sdl:
       binskim:
         enable: true
@@ -42,13 +56,12 @@ extends:
         os: windows
     settings:
       networkIsolationPolicy: Permissive,CFSClean,CFSClean2,CFSClean3
-    customBuildTags:
-    - ES365AIMigrationTooling
     stages:
-    - stage: stage
+    - stage: Build
+      displayName: Build
       jobs:
-      - job: Phase_1
-        displayName: Phase 1
+      - job: Build
+        displayName: Build and sign packages
         timeoutInMinutes: 120
         cancelTimeoutInMinutes: 1
         pool:
@@ -57,8 +70,12 @@ extends:
           mb:
             signing:
               enabled: true
-              signType: test
               zipSources: false
+              ${{ if and(eq(variables['Build.Reason'], 'Manual'), eq(parameters.useRealSigning, true)) }}:
+                signType: real
+                signWithProd: true
+              ${{ else }}:
+                signType: test
           outputs:
           - output: pipelineArtifact
             displayName: 'Publish Artifact: Nuget packages'
@@ -68,26 +85,25 @@ extends:
             sbomBuildDropPath: $(Build.SourcesDirectory)\bin\Release\Packages
             sbomBuildComponentPath: $(Build.SourcesDirectory)\bin\Release\Packages
             sbomPackageName: Microsoft.AspNet.OutputCache
-            # sbomPackageVersion: $(NugetPackageVersion)
             sbomValidate: true
         steps:
         - checkout: self
           clean: true
           fetchTags: true
-          persistCredentials: true
-        - task: NuGetToolInstaller@0
+        - task: NuGetToolInstaller@1
           displayName: Use NuGet 6.4.0
           inputs:
             versionSpec: 6.4.0
-            checkLatest: true
+            checkLatest: false
+        - task: NuGetAuthenticate@1
+          displayName: Authenticate Azure Artifacts feeds
         - task: NuGetCommand@2
-          displayName: NuGet custom
+          displayName: Install MicroBuild bootstrap package
           inputs:
             command: custom
-            arguments: install MicroBuild.Core -version 0.3.0 -OutputDirectory .\packages -source https://devdiv.pkgs.visualstudio.com/DefaultCollection/_packaging/MicroBuildToolset/nuget/v3/index.json
-        - task: NuGetAuthenticate@1
+            arguments: install Microsoft.VisualStudioEng.MicroBuild.Core -Version 0.4.1 -OutputDirectory .\packages -Source https://pkgs.dev.azure.com/devdiv/_packaging/MicroBuildToolset/nuget/v3/index.json -NonInteractive
         - task: NuGetCommand@2
-          displayName: NuGet restore
+          displayName: Restore NuGet packages
           inputs:
             command: restore
             restoreSolution: Microsoft.AspNet.OutputCache.sln
@@ -100,7 +116,7 @@ extends:
             msbuildVersion: 17.0
             msbuildArchitecture: x64
             configuration: Release
-            msbuildArguments: /p:GitCommit=$(Build.SourceVersion) /p:GitCommitLink="https://github.com/aspnet/AspNetOutputCache/commit/$(Build.SourceVersion)" /p:SignType=real /p:SignAssembly=true /verbosity:n
+            msbuildArguments: /p:GitCommit=$(Build.SourceVersion) /p:GitCommitLink="https://github.com/aspnet/AspNetOutputCache/commit/$(Build.SourceVersion)" /p:SignType=$(SignType) /p:SignAssembly=true /verbosity:n
             clean: true
             createLogFile: true
             logFileVerbosity: detailed

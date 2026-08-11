@@ -16,8 +16,6 @@ stages:
     displayName: Build and sign packages
     timeoutInMinutes: 120
     cancelTimeoutInMinutes: 1
-    pool:
-      name: VSEngSS-MicroBuild2022-1ES
     templateContext:
       mb:
         signing:

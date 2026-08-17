@@ -30,7 +30,6 @@ stages:
         artifactName: Nuget packages
         targetPath: $(Build.SourcesDirectory)\bin\Release\Packages
         sbomEnabled: true
-        sbomBuildDropPath: $(Build.SourcesDirectory)\bin\Release\Packages
         sbomBuildComponentPath: $(Build.SourcesDirectory)\bin\Release\Packages
         sbomPackageName: Microsoft.AspNet.OutputCache
         sbomValidate: true

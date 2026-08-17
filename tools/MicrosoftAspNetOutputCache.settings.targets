@@ -32,6 +32,7 @@
     <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
     <OutputPath>$(RepositoryRoot)bin\$(Configuration)\</OutputPath>
     <IntermediateOutputPath>$(RepositoryRoot)obj\$(Configuration)\$(MSBuildProjectName)\</IntermediateOutputPath>
+    <CompilerGeneratedFilesOutputPath>Generated</CompilerGeneratedFilesOutputPath>
   </PropertyGroup>
 
   <PropertyGroup>

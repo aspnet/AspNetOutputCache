@@ -25,7 +25,7 @@ The `OutputCacheModuleAsync` is designed to work with any cache provider that im
 
 1. **Target your application to .NET Framework 4.6.2 or later**
    
-   The `OutputCacheProviderAsync` interface was introduced in .NET Framework 4.6.2, therefore you need to target your application to .NET Framework 4.6.2 or above in order to use the Async OutputCache Module. Download the [.NET Framework 4.6.2 Developer Pack](https://www.microsoft.com/en-us/download/details.aspx?id=53321) if you do not have it installed yet and update your application�s `web.config` targetFramework attributes as demonstrated below:
+   The `OutputCacheProviderAsync` interface was introduced in .NET Framework 4.6.2, therefore you need to target your application to .NET Framework 4.6.2 or above in order to use the Async OutputCache Module. Download the [.NET Framework 4.6.2 Developer Pack](https://www.microsoft.com/en-us/download/details.aspx?id=53321) if you do not have it installed yet and update your application's `web.config` targetFramework attributes as demonstrated below:
 
    ```xml
    <system.web>

@@ -1018,10 +1018,16 @@ namespace Microsoft.AspNet.OutputCache {
                 byte[] body = new byte[0];
                 if (contentLength > 0) {
                     using (var ms = new MemoryStream()) {
-                        var position = request.InputStream.Position;
-                        request.InputStream.CopyTo(ms);
-                        request.InputStream.Position = position;
-                        body = ms.ToArray();
+                        var inputStream = request.InputStream;
+                        var position = inputStream.Position;
+                        try {
+                            inputStream.Position = 0;
+                            inputStream.CopyTo(ms);
+                            body = ms.ToArray();
+                        }
+                        finally {
+                            inputStream.Position = position;
+                        }
                     }
                 }
                 writer.WriteBytes(body);

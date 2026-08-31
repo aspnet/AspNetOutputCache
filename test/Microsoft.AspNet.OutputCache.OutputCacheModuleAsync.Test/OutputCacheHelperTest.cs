@@ -483,6 +483,37 @@ namespace Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test {
         }
 
         [Fact]
+        public void CreateOutputCachedItemKey_Reads_Complete_Post_Body_And_Restores_Position() {
+            var body = new byte[] { 1, 2, 3, 4 };
+            var inputStream = new MemoryStream(body);
+            inputStream.Position = inputStream.Length;
+            var request = new Mock<HttpRequestBase>();
+            request.Setup(r => r.Path).Returns("test.aspx");
+            request.Setup(r => r.HttpMethod).Returns(HttpMethods_POST);
+            request.Setup(r => r.ServerVariables).Returns(new NameValueCollection());
+            request.Setup(r => r.QueryString).Returns(new NameValueCollection());
+            request.Setup(r => r.Form).Returns(new NameValueCollection());
+            request.Setup(r => r.Headers).Returns(new NameValueCollection());
+            request.Setup(r => r.ContentLength).Returns(body.Length);
+            request.Setup(r => r.InputStream).Returns(inputStream);
+            var helper = new OutputCacheHelper(
+                CreateHttpContextBase(request.Object),
+                new Mock<IOutputCacheUtility>().Object);
+
+            var keyFromEnd = helper.CreateOutputCachedItemKey(
+                new CachedVary { VaryByAllParams = true });
+
+            Assert.Equal(inputStream.Length, inputStream.Position);
+
+            inputStream.Position = 0;
+            var keyFromStart = helper.CreateOutputCachedItemKey(
+                new CachedVary { VaryByAllParams = true });
+
+            Assert.Equal(keyFromStart, keyFromEnd);
+            Assert.Equal(0, inputStream.Position);
+        }
+
+        [Fact]
         public async Task GetBaseCacheEntryAsync_Rejects_Mismatched_CanonicalId() {
             var request = CreateKeyRequest("test.aspx", new NameValueCollection());
             var context = CreateHttpContextBase(request.Object);

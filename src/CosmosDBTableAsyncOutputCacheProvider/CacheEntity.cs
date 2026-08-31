@@ -41,6 +41,14 @@ namespace Microsoft.AspNet.OutputCache.CosmosDBTableAsyncOutputCacheProvider {
         public ETag ETag { get; set; }
 
         public static string GeneratePartitionKey(string cacheKey) {
+            // TODO: (The AspNetSessionState cosmos package already made this update.)
+            // V1 providers use ten application-defined buckets, so this mapping is part
+            // of the persisted entity address and must remain stable throughout V1.x.
+            // A V2 provider should consider using the complete cache key here instead:
+            // its high cardinality lets Cosmos distribute logical partitions and avoids
+            // concentrating traffic into ten hot partitions. That change requires a
+            // major version because old and new providers would address entries using
+            // different (PartitionKey, RowKey) pairs during a rolling upgrade.
             return (cacheKey.Length % 10).ToString();
         }
 

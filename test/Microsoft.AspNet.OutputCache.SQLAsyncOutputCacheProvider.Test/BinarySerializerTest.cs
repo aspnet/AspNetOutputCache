@@ -53,6 +53,18 @@ namespace Microsoft.AspNet.OutputCache.SQLAsyncOutputCacheProvider.Test
             Assert.Equal(obj, actualObj);
         }
 
+        [Fact]
+        public void BinarySerializer_Can_RoundTrip_VerifiedCacheEntry_Type() {
+            var canonicalId = "OC2S4:test";
+            var cacheValue = new CachedVary { VaryByCustom = "custom" };
+            var entry = new VerifiedCacheEntry(canonicalId, cacheValue);
+
+            var actual = RoundTrip(entry);
+
+            Assert.Equal(canonicalId, actual.CanonicalId);
+            Assert.Equal(cacheValue, actual.CacheValue);
+        }
+
         private T RoundTrip<T>(T obj) {
             return (T)BinarySerializer.Deserialize(BinarySerializer.Serialize(obj));
         }

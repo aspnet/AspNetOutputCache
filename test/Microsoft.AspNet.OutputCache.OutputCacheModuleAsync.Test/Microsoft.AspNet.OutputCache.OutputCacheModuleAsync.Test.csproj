@@ -93,6 +93,7 @@
     <Compile Include="HttpCachePolicySettingsTest.cs" />
     <Compile Include="InMemoryOutputCacheProviderTest.cs" />
     <Compile Include="OutputCacheHelperTest.cs" />
+    <Compile Include="OutputCacheKeyTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

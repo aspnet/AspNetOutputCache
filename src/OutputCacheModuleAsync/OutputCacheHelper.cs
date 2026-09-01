@@ -23,7 +23,7 @@ namespace Microsoft.AspNet.OutputCache {
         private const string NullVarybyValue = "+n+";
         private const string OutputcacheKeyprefixPost = "a1";
         private const string OutputcacheKeyprefixGet = "a2";
-        private const string Identity = "identity";
+        private const string IdentityEncoding = "identity";
         private const string Asterisk = "*";
         private const string OutputcacheKeyprefixDependencies = "Microsoft.AspNet.OutputCache.Dependencies";
         private static CacheItemRemovedCallback s_dependencyRemovedCallback;
@@ -32,17 +32,27 @@ namespace Microsoft.AspNet.OutputCache {
         private static Converter converter = new Converter();
         private HttpContextBase _context;
         private IOutputCacheUtility _cacheUtility;
+        private readonly bool _allowLegacyOutputCacheKeys;
         #endregion
 
-        public OutputCacheHelper(HttpContextBase httpContext) : this(httpContext, new OutputCacheUtilityAdapter())
+        public OutputCacheHelper(HttpContextBase httpContext) : this(httpContext, new OutputCacheUtilityAdapter(), false)
         {
         }
 
+        internal OutputCacheHelper(HttpContextBase httpContext, bool allowLegacyOutputCacheKeys)
+            : this(httpContext, new OutputCacheUtilityAdapter(), allowLegacyOutputCacheKeys) {
+        }
+
         internal OutputCacheHelper(HttpContextBase httpContext, IOutputCacheUtility cacheUtil)
+            : this(httpContext, cacheUtil, false) {
+        }
+
+        internal OutputCacheHelper(HttpContextBase httpContext, IOutputCacheUtility cacheUtil, bool allowLegacyOutputCacheKeys)
         {
             _context = httpContext;
             s_dependencyRemovedCallback = new CacheItemRemovedCallback(DependencyRemovedCallback);
             _cacheUtility = cacheUtil;
+            _allowLegacyOutputCacheKeys = allowLegacyOutputCacheKeys;
         }
 
         #region public methods
@@ -123,7 +133,7 @@ namespace Microsoft.AspNet.OutputCache {
         }
 
         public async Task<object> GetAsCacheVaryAsync(CachedVary cachedVary) {
-            object item = null;
+            OutputCacheLookupResult lookup = null;
             // If we have one, create a new cache key for it (this is a must)
             /*
                  * This cached output has a Vary policy. Create a new key based 
@@ -131,59 +141,102 @@ namespace Microsoft.AspNet.OutputCache {
                  *
                  * Skip this step if it's a VaryByNone vary policy.
                  */
-            var key = CreateOutputCachedItemKey(cachedVary);
-            if (key == null) {
-                return null;
-            }
             if (cachedVary.ContentEncodings == null) {
                 // With the new key, look up the in-memory key.
                 // At this point, we've exhausted the lookups in memory for this item.
-                item = await GetAsync(key);
+                lookup = await GetVariedCacheEntryAsync(cachedVary, null);
             }
             else {
                 var identityIsAcceptable = true;
                 var acceptEncoding = _context.Request.Headers[HttpHeaders.AcceptEncoding];
                 if (acceptEncoding != null) {
                     var contentEncodings = cachedVary.ContentEncodings;
-                    var startIndex = 0;
-                    var done = false;
+                    var preferredIndex = GetAcceptableEncoding(
+                        contentEncodings, 0, acceptEncoding);
+                    if (preferredIndex >= 0) {
+                        identityIsAcceptable = false;
+                        lookup = await GetVariedCacheEntryAsync(
+                            cachedVary, contentEncodings[preferredIndex]);
+                    }
+                    else if (preferredIndex == -2) {
+                        identityIsAcceptable = false;
+                    }
 
-                    while (!done) {
-                        done = true;
-                        var index = GetAcceptableEncoding(contentEncodings, startIndex, acceptEncoding);
-                        if (index > -1) {
-                            identityIsAcceptable = false;
-                            // the client Accept-Encoding header contains an encoding that's in the VaryByContentEncoding list
-                            item = await GetAsync(key);
-                            if (item != null) {
+                    if (lookup == null) {
+                        for (int i = 0; i < contentEncodings.Length; i++) {
+                            if (i == preferredIndex ||
+                                !IsConfiguredEncodingAcceptable(
+                                    contentEncodings[i], acceptEncoding)) {
                                 continue;
                             }
-                            startIndex = index + 1;
-                            if (startIndex < contentEncodings.Length) {
-                                done = false;
-                            }
-                        }
-                        else if (index == -2) {
-                            // the identity has a weight of 0 and is not acceptable
+
                             identityIsAcceptable = false;
+                            lookup = await GetVariedCacheEntryAsync(
+                                cachedVary, contentEncodings[i]);
+                            if (lookup != null) {
+                                break;
+                            }
                         }
                     }
                 }
                 // the identity should not be used if the client Accept-Encoding contains an entry in the VaryByContentEncoding list or "identity" is not acceptable
-                if (item == null && identityIsAcceptable) {
-                    item = await GetAsync(key);
+                if (lookup == null && identityIsAcceptable) {
+                    lookup = await GetVariedCacheEntryAsync(cachedVary, null);
                 }
             }
-            if (item == null) return null;
+            if (lookup == null && _allowLegacyOutputCacheKeys) {
+                string legacyKey = CreateLegacyOutputCachedItemKey(
+                    _context.Request.Path,
+                    _context.Request.HttpMethod,
+                    cachedVary);
+                object legacyValue = await GetAsync(legacyKey);
+                if (legacyValue != null) {
+                    lookup = new OutputCacheLookupResult(legacyKey, legacyValue);
+                }
+            }
+            if (lookup == null) return null;
 
-            if (((CachedRawResponse)item).CachedVaryId == cachedVary.CachedVaryId) {
-                return item;
+            if (((CachedRawResponse)lookup.CacheValue).CachedVaryId == cachedVary.CachedVaryId) {
+                return lookup.CacheValue;
             }
             else {
                 // explicitly remove entry because _cachedVaryId does not match
-                await RemoveAsync(key);
+                await RemoveAsync(lookup.CacheKey);
                 return null;
             }
+        }
+
+        private async Task<OutputCacheLookupResult> GetVariedCacheEntryAsync(
+            CachedVary cachedVary, string contentEncoding) {
+
+            OutputCacheKey key;
+            if (!TryCreateOutputCachedItemKey(cachedVary, contentEncoding, out key)) {
+                return null;
+            }
+
+            var value = await GetVerifiedAsync(key);
+            return value == null
+                ? null
+                : new OutputCacheLookupResult(key.HashedKey, value);
+        }
+
+        public async Task<OutputCacheLookupResult> GetBaseCacheEntryAsync() {
+            OutputCacheKey key;
+            if (TryCreateOutputCachedItemKey(null, out key)) {
+                var value = await GetVerifiedAsync(key);
+                if (value != null) {
+                    return new OutputCacheLookupResult(key.HashedKey, value);
+                }
+            }
+
+            if (!_allowLegacyOutputCacheKeys) {
+                return null;
+            }
+
+            string legacyKey = CreateLegacyOutputCachedItemKey(
+                _context.Request.Path, _context.Request.HttpMethod, null);
+            var legacyValue = await GetAsync(legacyKey);
+            return legacyValue == null ? null : new OutputCacheLookupResult(legacyKey, legacyValue);
         }
 
         public bool CheckCachedVary(CachedVary cachedVary, HttpCachePolicySettings settings) {
@@ -212,6 +265,24 @@ namespace Microsoft.AspNet.OutputCache {
         public async Task<object> GetAsync(string key) {
             var provider = GetProvider();
             var result = await provider.GetAsync(key);
+            return await MaterializeProviderResultAsync(result, key, provider);
+        }
+
+        private async Task<object> GetVerifiedAsync(OutputCacheKey key) {
+            var provider = GetProvider();
+            var result = await provider.GetAsync(key.HashedKey);
+            var verifiedEntry = result as VerifiedCacheEntry;
+            if (verifiedEntry == null ||
+                !CanonicalIdsEqual(key.CanonicalId, verifiedEntry.CanonicalId)) {
+                return null;
+            }
+
+            return await MaterializeProviderResultAsync(
+                verifiedEntry.CacheValue, key.HashedKey, provider);
+        }
+
+        private async Task<object> MaterializeProviderResultAsync(
+            object result, string key, OutputCacheProviderAsync provider) {
             var oce = result as OutputCacheEntry;
 
             if (oce == null) {
@@ -231,7 +302,18 @@ namespace Microsoft.AspNet.OutputCache {
         * and form posted data.
         */
         public string CreateOutputCachedItemKey(CachedVary cachedVary) {
-            return CreateOutputCachedItemKey(_context.Request.Path, _context.Request.HttpMethod, cachedVary);
+            OutputCacheKey key;
+            return TryCreateOutputCachedItemKey(cachedVary, out key) ? key.HashedKey : null;
+        }
+
+        internal OutputCacheKey CreateOutputCacheKey(
+            CachedVary cachedVary,
+            string contentEncoding) {
+
+            OutputCacheKey key;
+            return TryCreateOutputCachedItemKey(cachedVary, contentEncoding, out key)
+                ? key
+                : null;
         }
 
         /*
@@ -260,7 +342,7 @@ namespace Microsoft.AspNet.OutputCache {
                     acceptEncodingWithoutWeight = acceptEncoding.Substring(0, tokenEnd);
                     if (ParseWeight(acceptEncoding, tokenEnd) == 0) {
                         //weight is 0, use "identity" only if it is acceptable
-                        var identityIsAcceptable = !acceptEncodingWithoutWeight.Equals(Identity, StringComparison.OrdinalIgnoreCase) &&
+                        var identityIsAcceptable = !acceptEncodingWithoutWeight.Equals(IdentityEncoding, StringComparison.OrdinalIgnoreCase) &&
                                                     acceptEncodingWithoutWeight != Asterisk;
                         return (identityIsAcceptable) ? -1 : -2;
                     }
@@ -305,11 +387,11 @@ namespace Microsoft.AspNet.OutputCache {
         public bool IsAcceptableEncoding(string contentEncoding, string acceptEncoding) {
             if (string.IsNullOrEmpty(contentEncoding)) {
                 // if Content-Encoding is not set treat it as the identity
-                contentEncoding = Identity;
+                contentEncoding = IdentityEncoding;
             }
             if (string.IsNullOrEmpty(acceptEncoding)) {
                 // only the identity is acceptable if Accept-Encoding is not set
-                return (contentEncoding.Equals(Identity, StringComparison.OrdinalIgnoreCase));
+                return (contentEncoding.Equals(IdentityEncoding, StringComparison.OrdinalIgnoreCase));
             }
             var weight = GetAcceptableEncodingHelper(contentEncoding, acceptEncoding);
             return !(weight == 0) &&
@@ -370,7 +452,7 @@ namespace Microsoft.AspNet.OutputCache {
 
         public async Task CacheResponseAsync() {
             CachedVary cachedVary = null; ;
-            string keyRawResponse;
+            OutputCacheKey keyRawResponse;
             /* Add response to cache.*/
             UpdateCachedHeaders();
             //look at response cachepolicy and decide if to cache it
@@ -378,7 +460,10 @@ namespace Microsoft.AspNet.OutputCache {
             var varyByHeaders = settings.VaryByHeaders;
             var varyByParams = settings.IgnoreParams ? null : settings.VaryByParams;
             /* Create the key if it was not created in OnEnter */
-            var key = CreateOutputCachedItemKey(null);
+            OutputCacheKey key;
+            if (!TryCreateOutputCachedItemKey(null, out key)) {
+                return;
+            }
 
             if (settings.VaryByContentEncodings == null && varyByHeaders == null && varyByParams == null &&
                 settings.VaryByCustom == null) {
@@ -419,8 +504,10 @@ namespace Microsoft.AspNet.OutputCache {
                     VaryByAllParams = varyByAllParams,
                     VaryByCustom = settings.VaryByCustom
                 };
-                keyRawResponse = CreateOutputCachedItemKey(cachedVary);
-                if (keyRawResponse == null) {
+                string responseContentEncoding = GetResponseContentEncoding(
+                    cachedVary.ContentEncodings);
+                if (!TryCreateOutputCachedItemKey(
+                    cachedVary, responseContentEncoding, out keyRawResponse)) {
                     return;
                 }
                 // it is possible that the user code calculating custom vary-by
@@ -551,9 +638,9 @@ namespace Microsoft.AspNet.OutputCache {
             await provider.RemoveAsync(key);
         }
 
-        private async Task InsertResponseAsync(string cachedVaryKey,
+        private async Task InsertResponseAsync(OutputCacheKey cachedVaryKey,
             CachedVary cachedVary,
-            string rawResponseKey,
+            OutputCacheKey rawResponseKey,
             CachedRawResponse rawResponse,
             CacheDependency dependencies,
             DateTime absExp,
@@ -576,12 +663,23 @@ namespace Microsoft.AspNet.OutputCache {
                  * Use the Add method so that we guarantee we only use
                  * a single CachedVary and don't overwrite existing ones.
                  */
-                var cachedVaryInCache =
-                    (CachedVary)await provider.AddAsync(cachedVaryKey, cachedVary, Cache.NoAbsoluteExpiration);
+                var newEntry = new VerifiedCacheEntry(cachedVaryKey.CanonicalId, cachedVary);
+                var existingEntry =
+                    await provider.AddAsync(cachedVaryKey.HashedKey, newEntry, Cache.NoAbsoluteExpiration)
+                    as VerifiedCacheEntry;
+                var cachedVaryInCache = existingEntry != null &&
+                    CanonicalIdsEqual(cachedVaryKey.CanonicalId, existingEntry.CanonicalId)
+                    ? existingEntry.CacheValue as CachedVary
+                    : null;
 
-                if (cachedVaryInCache != null) {
+                if (existingEntry != null && cachedVaryInCache == null) {
+                    await provider.SetAsync(
+                        cachedVaryKey.HashedKey, newEntry, Cache.NoAbsoluteExpiration);
+                }
+                else if (cachedVaryInCache != null) {
                     if (!cachedVary.Equals(cachedVaryInCache)) {
-                        await provider.SetAsync(cachedVaryKey, cachedVary, Cache.NoAbsoluteExpiration);
+                        await provider.SetAsync(
+                            cachedVaryKey.HashedKey, newEntry, Cache.NoAbsoluteExpiration);
                     }
                     else {
                         cachedVary = cachedVaryInCache;
@@ -601,14 +699,17 @@ namespace Microsoft.AspNet.OutputCache {
             else {
                 oce = converter.CreateOutputCacheEntry(rawResponse, null, null);
             }
-            await provider.SetAsync(rawResponseKey, oce, absExp);
+            await provider.SetAsync(
+                rawResponseKey.HashedKey,
+                new VerifiedCacheEntry(rawResponseKey.CanonicalId, oce),
+                absExp);
 
             if (dependencies != null) {
                 // Check if Cache Dependency is supported
                 var cacheDepHandler = provider as ICacheDependencyHandler;
                 if (cacheDepHandler != null) {
                     var dce = new DependencyCacheEntry {
-                        RawResponseKey = rawResponseKey,
+                        RawResponseKey = rawResponseKey.HashedKey,
                         KernelCacheUrl = oce.KernelCacheUrl,
                         ProviderName = provider.Name
                     };
@@ -846,7 +947,198 @@ namespace Microsoft.AspNet.OutputCache {
             return utcFileLastModifiedMax;
         }
 
-        private string CreateOutputCachedItemKey(string path, string verb, CachedVary cachedVary) {
+        private bool TryCreateOutputCachedItemKey(CachedVary cachedVary, out OutputCacheKey key) {
+            return TryCreateOutputCachedItemKey(cachedVary, null, false, out key);
+        }
+
+        private bool TryCreateOutputCachedItemKey(
+            CachedVary cachedVary,
+            string contentEncoding,
+            out OutputCacheKey key) {
+            return TryCreateOutputCachedItemKey(cachedVary, contentEncoding, true, out key);
+        }
+
+        private bool TryCreateOutputCachedItemKey(
+            CachedVary cachedVary,
+            string contentEncoding,
+            bool useContentEncodingOverride,
+            out OutputCacheKey key) {
+
+            var request = _context.Request;
+            var writer = new OutputCacheKeyWriter();
+            writer.WriteToken(request.HttpMethod.Equals(HttpMethods.POST, StringComparison.OrdinalIgnoreCase)
+                ? 'P'
+                : 'G');
+            writer.WriteString(CultureInfo.InvariantCulture.TextInfo.ToLower(request.Path));
+
+            if (cachedVary == null) {
+                writer.WriteToken('0');
+                return writer.TryGetKey(out key);
+            }
+
+            writer.WriteToken('1');
+            writer.WriteToken(cachedVary.VaryByAllParams ? '1' : '0');
+            WriteStringArray(writer, cachedVary.ContentEncodings);
+            WriteNameValueSection(writer, cachedVary.Headers, request.ServerVariables, false);
+            WriteNameValueSection(
+                writer,
+                cachedVary.Params,
+                request.QueryString,
+                cachedVary.VaryByAllParams);
+
+            if (request.HttpMethod.Equals(HttpMethods.POST, StringComparison.OrdinalIgnoreCase)) {
+                WriteNameValueSection(
+                    writer,
+                    cachedVary.Params,
+                    request.Form,
+                    cachedVary.VaryByAllParams);
+            }
+            else {
+                WriteNameValueSection(writer, null, null, false);
+            }
+
+            writer.WriteString(cachedVary.VaryByCustom);
+            if (cachedVary.VaryByCustom != null) {
+                writer.WriteString(_cacheUtility.GetVaryByCustomString(
+                    _context, cachedVary.VaryByCustom));
+            }
+
+            bool includePostBody =
+                request.HttpMethod.Equals(HttpMethods.POST, StringComparison.OrdinalIgnoreCase) &&
+                cachedVary.VaryByAllParams &&
+                request.Form.Count == 0;
+            writer.WriteToken(includePostBody ? '1' : '0');
+            if (includePostBody) {
+                int contentLength = request.ContentLength;
+                if (contentLength > MaxPostKeyLength || contentLength < 0) {
+                    key = null;
+                    return false;
+                }
+
+                byte[] body = new byte[0];
+                if (contentLength > 0) {
+                    using (var ms = new MemoryStream()) {
+                        var inputStream = request.InputStream;
+                        var position = inputStream.Position;
+                        try {
+                            inputStream.Position = 0;
+                            inputStream.CopyTo(ms);
+                            body = ms.ToArray();
+                        }
+                        finally {
+                            inputStream.Position = position;
+                        }
+                    }
+                }
+                writer.WriteBytes(body);
+            }
+
+            string selectedContentEncoding = contentEncoding;
+            if (!useContentEncodingOverride &&
+                cachedVary.ContentEncodings != null &&
+                request.Headers[HttpHeaders.AcceptEncoding] != null) {
+                int selectedIndex = GetAcceptableEncoding(
+                    cachedVary.ContentEncodings,
+                    0,
+                    request.Headers[HttpHeaders.AcceptEncoding]);
+                if (selectedIndex >= 0) {
+                    selectedContentEncoding = cachedVary.ContentEncodings[selectedIndex];
+                }
+            }
+            writer.WriteString(selectedContentEncoding);
+
+            return writer.TryGetKey(out key);
+        }
+
+        private static void WriteNameValueSection(
+            OutputCacheKeyWriter writer,
+            string[] configuredNames,
+            NameValueCollection values,
+            bool useAllNames) {
+
+            string[] names = configuredNames;
+            if (useAllNames && values != null && values.Count > 0) {
+                names = values.AllKeys;
+                for (int i = names.Length - 1; i >= 0; i--) {
+                    if (names[i] != null) {
+                        names[i] = CultureInfo.InvariantCulture.TextInfo.ToLower(names[i]);
+                    }
+                }
+
+                Array.Sort(names, InvariantComparer.Default);
+            }
+
+            if (names == null) {
+                writer.WriteArrayLength(-1);
+                return;
+            }
+
+            writer.WriteArrayLength(names.Length);
+            foreach (string name in names) {
+                writer.WriteString(name);
+                WriteStringArray(writer, values == null ? null : values.GetValues(name));
+            }
+        }
+
+        private static void WriteStringArray(OutputCacheKeyWriter writer, string[] values) {
+            if (values == null) {
+                writer.WriteArrayLength(-1);
+                return;
+            }
+
+            writer.WriteArrayLength(values.Length);
+            foreach (string value in values) {
+                writer.WriteString(value);
+            }
+        }
+
+        internal string GetResponseContentEncoding(string[] configuredContentEncodings) {
+            if (configuredContentEncodings == null) {
+                return null;
+            }
+
+            string responseContentEncoding =
+                _context.Response.Headers[HttpHeaders.ContentEncoding];
+            if (responseContentEncoding != null) {
+                string configuredResponseEncoding =
+                    configuredContentEncodings.FirstOrDefault(
+                        configured => configured.Equals(
+                            responseContentEncoding, StringComparison.OrdinalIgnoreCase));
+                if (configuredResponseEncoding != null) {
+                    return configuredResponseEncoding;
+                }
+            }
+
+            string acceptEncoding =
+                _context.Request.Headers[HttpHeaders.AcceptEncoding];
+            if (acceptEncoding == null) {
+                return null;
+            }
+
+            int selectedIndex = GetAcceptableEncoding(
+                configuredContentEncodings, 0, acceptEncoding);
+            return selectedIndex < 0
+                ? null
+                : configuredContentEncodings[selectedIndex];
+        }
+
+        private bool IsConfiguredEncodingAcceptable(
+            string contentEncoding, string acceptEncoding) {
+
+            double weight = GetAcceptableEncodingHelper(
+                contentEncoding, acceptEncoding);
+            if (weight >= 0) {
+                return weight > 0;
+            }
+
+            return GetAcceptableEncodingHelper(Asterisk, acceptEncoding) > 0;
+        }
+
+        private static bool CanonicalIdsEqual(string expected, string actual) {
+            return string.Equals(expected, actual, StringComparison.Ordinal);
+        }
+
+        private string CreateLegacyOutputCachedItemKey(string path, string verb, CachedVary cachedVary) {
             var request = _context.Request;
             var sb = verb.Equals(HttpMethods.POST, StringComparison.OrdinalIgnoreCase)
                 ? new StringBuilder(OutputcacheKeyprefixPost, path.Length + OutputcacheKeyprefixPost.Length)
@@ -1051,7 +1343,7 @@ namespace Microsoft.AspNet.OutputCache {
         }
 
         private bool IsIdentityAcceptable(string acceptEncoding) {
-            var identityWeight = GetAcceptableEncodingHelper(Identity, acceptEncoding);
+            var identityWeight = GetAcceptableEncodingHelper(IdentityEncoding, acceptEncoding);
             if (identityWeight == 0
                 || (identityWeight <= 0 && GetAcceptableEncodingHelper(Asterisk, acceptEncoding) == 0)) {
                 return false;
@@ -1059,7 +1351,7 @@ namespace Microsoft.AspNet.OutputCache {
             return true;
         }
 
-        private async Task InsertResponseAsync(string key, DateTime utcExpires, CachedVary cachedVary, HttpCachePolicySettings settings, string keyRawResponse, TimeSpan slidingDelta) {
+        private async Task InsertResponseAsync(OutputCacheKey key, DateTime utcExpires, CachedVary cachedVary, HttpCachePolicySettings settings, OutputCacheKey keyRawResponse, TimeSpan slidingDelta) {
             if (utcExpires > DateTime.UtcNow) {
                 // Create the response object to be sent on cache hits.
                 var httpRawResponse = GetSnapshot();
@@ -1154,5 +1446,16 @@ namespace Microsoft.AspNet.OutputCache {
             return true;
         }
         #endregion     
+    }
+
+    sealed class OutputCacheLookupResult {
+        public OutputCacheLookupResult(string cacheKey, object cacheValue) {
+            CacheKey = cacheKey;
+            CacheValue = cacheValue;
+        }
+
+        public string CacheKey { get; private set; }
+
+        public object CacheValue { get; private set; }
     }
 }

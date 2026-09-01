@@ -13,11 +13,14 @@ namespace Microsoft.AspNet.OutputCache {
     /// OutputCache Async Module, this Module is able to use Async type of OutputCache Providers 
     /// </summary>
     public class OutputCacheModuleAsync : IHttpModule {
+        private bool _allowLegacyOutputCacheKeys;
+
         void IHttpModule.Init(HttpApplication app) {
             var cacheConfig = ConfigurationManager.GetSection("system.web/caching/outputCache") as OutputCacheSection;
             if (!cacheConfig.EnableOutputCache) {
                 return;
             }
+            _allowLegacyOutputCacheKeys = AppSettings.AllowLegacyOutputCacheKeys;
             app.AddOnResolveRequestCacheAsync(BeginOnResolveRequestCache, EndOnResolveRequestCache);
             app.AddOnUpdateRequestCacheAsync(BeginOnUpdateRequestCache, EndOnUpdateRequestCache);
         }
@@ -45,19 +48,19 @@ namespace Microsoft.AspNet.OutputCache {
 
         private async Task OnEnterAsync(object source, EventArgs eventArgs) {
             var app = (HttpApplication)source;
-            var helper = new OutputCacheHelper(new HttpContextWrapper(app.Context));
+            var helper = new OutputCacheHelper(
+                new HttpContextWrapper(app.Context),
+                _allowLegacyOutputCacheKeys);
             if (!helper.IsHttpMethodSupported()) {
                 return;
             }
 
-            // Create a lookup key. Also store the key in global parameter _key to be used inside OnLeave() later   
-            string key = helper.CreateOutputCachedItemKey(null);
-
             // Lookup the cache vary using the key
-            object item = await helper.GetAsync(key);
-            if (item == null) {
+            var lookup = await helper.GetBaseCacheEntryAsync();
+            if (lookup == null) {
                 return;
             }
+            object item = lookup.CacheValue;
 
             // 'item' may be one of the following:
             //  - a CachedVary object (if the object varies by something)
@@ -89,7 +92,7 @@ namespace Microsoft.AspNet.OutputCache {
             if (helper.CheckHeaders(settings)) {
                 return;
             }
-            if (await helper.CheckValidityAsync(key, settings)) {
+            if (await helper.CheckValidityAsync(lookup.CacheKey, settings)) {
                 return;
             }
             if (!helper.IsContentEncodingAcceptable(cachedVary, cachedRawResponse.RawResponse)) {
@@ -106,7 +109,9 @@ namespace Microsoft.AspNet.OutputCache {
         }
 
         private async Task OnLeaveAsync(object source, EventArgs eventArgs) {
-            var helper = new OutputCacheHelper(new HttpContextWrapper(((HttpApplication)source).Context));
+            var helper = new OutputCacheHelper(
+                new HttpContextWrapper(((HttpApplication)source).Context),
+                _allowLegacyOutputCacheKeys);
             if (helper.IsResponseCacheable()) {
                 await helper.CacheResponseAsync();
             }

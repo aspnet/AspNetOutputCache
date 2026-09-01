@@ -25,7 +25,7 @@ The `OutputCacheModuleAsync` is designed to work with any cache provider that im
 
 1. **Target your application to .NET Framework 4.6.2 or later**
    
-   The `OutputCacheProviderAsync` interface was introduced in .NET Framework 4.6.2, therefore you need to target your application to .NET Framework 4.6.2 or above in order to use the Async OutputCache Module. Download the [.NET Framework 4.6.2 Developer Pack](https://www.microsoft.com/en-us/download/details.aspx?id=53321) if you do not have it installed yet and update your application’s `web.config` targetFramework attributes as demonstrated below:
+   The `OutputCacheProviderAsync` interface was introduced in .NET Framework 4.6.2, therefore you need to target your application to .NET Framework 4.6.2 or above in order to use the Async OutputCache Module. Download the [.NET Framework 4.6.2 Developer Pack](https://www.microsoft.com/en-us/download/details.aspx?id=53321) if you do not have it installed yet and update your application's `web.config` targetFramework attributes as demonstrated below:
 
    ```xml
    <system.web>
@@ -77,7 +77,46 @@ The `OutputCacheModuleAsync` is designed to work with any cache provider that im
    
    If there are special requirements of a cache store that are not met by these released providers, consider [implementing an async OutputCache Provider of your own](https://devblogs.microsoft.com/dotnet/introducing-the-asp-net-async-outputcache-module/#how-to-implement-an-async-outputcache-provider).
 
+## Cache key hardening in v1.1
+
+As of _version 1.1.0_, `OutputCacheModuleAsync` uses a compact, versioned,
+length-framed string representation of the complete request variant when
+generating cache keys. The cache provider receives a bounded, SHA-256-based
+hashed key, while the cached value contains the full canonical ID used to
+generate it. A cached value is served only when that canonical ID matches the
+current request exactly. This prevents ambiguous vary-by values or a hashed-key
+collision from returning a different variant's response.
+
+Canonical IDs are limited to **8,192** characters. A response is not cached when
+its canonical ID exceeds that limit. This bounds attacker-controlled
+vary-by metadata and avoids exceeding provider key limits.
+
+Upgrading does not require a SQL or Cosmos DB table schema change. Existing
+entries use the legacy key format and are ignored by default, then expire
+normally as new requests populate hardened entries. Applications that need a
+temporary warm-cache transition can opt into legacy reads:
+
+```xml
+<appSettings>
+  <add key="aspnet:AllowLegacyOutputCacheKeys" value="true" />
+</appSettings>
+```
+
+This setting affects reads only; all new entries use hardened keys. Legacy
+entries do not contain an exact canonical ID, so enabling the setting
+also restores the legacy collision behavior for those entries until they
+expire or the cache is cleared. Leave the setting unset or `false` for the
+default hardened behavior. As with ASP.NET's other boolean app settings, a
+missing or malformed value uses the default of `false`.
+
+Output caching is a performance feature and is not a security boundary.
+
 ## Updates
+
+### v1.1.0
+
+  - Added collision-resistant, versioned cache keys with exact canonical-ID verification.
+  - Added optional legacy-key reads for warm-cache transitions.
 
 ### v1.0.4
 

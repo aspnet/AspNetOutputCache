@@ -4,8 +4,8 @@
     <!-- Update version in config.xdt's for major/minor changes. (Don't update for 'release' changes.) -->
     <!-- See MicrosoftAspNetOutputCache.settings.targets for default version settings. -->
     <VersionMajor>1</VersionMajor>
-    <VersionMinor>0</VersionMinor>
-    <VersionRelease>4</VersionRelease>
+    <VersionMinor>1</VersionMinor>
+    <VersionRelease>0</VersionRelease>
   </PropertyGroup>
   <Target Name="SetNuSpecProperties">
     <PropertyGroup>

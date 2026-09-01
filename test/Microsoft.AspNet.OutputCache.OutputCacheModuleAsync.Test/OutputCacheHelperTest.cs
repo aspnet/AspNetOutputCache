@@ -6,7 +6,10 @@ namespace Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test {
     using System;
     using System.Collections.Generic;
     using System.Collections.Specialized;
+    using System.IO;
+    using System.Threading.Tasks;
     using System.Web;
+    using System.Web.Caching;
     using Xunit;
     using System.Reflection;
 
@@ -290,11 +293,13 @@ namespace Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test {
             var ocHelper = new OutputCacheHelper(context, cacheUtilMoq.Object);
 
             var key = ocHelper.CreateOutputCachedItemKey(null);
-            Assert.Equal("a1test.aspx", key);
+            Assert.StartsWith("oc:v2:", key);
+            var baseKey = key;
 
             var cv = new CachedVary() { VaryByCustom = "CustomVary" };
             key = ocHelper.CreateOutputCachedItemKey(cv);
-            Assert.Equal("a1test.aspxHQFCNCustomVaryVUtilCustomVaryDE", key);
+            Assert.NotEqual(baseKey, key);
+            var customKey = key;
 
             cv = new CachedVary() {
                 Headers = new string[] { "AUTH_TYPE", "HTTP_HOST" },
@@ -302,7 +307,8 @@ namespace Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test {
                 VaryByAllParams = true
             };
             key = ocHelper.CreateOutputCachedItemKey(cv);
-            Assert.Equal("a1test.aspxHNAUTH_TYPEVBasicNHTTP_HOSTVlocalhostQNquery1V1Nquery2VaBFNform1V1Nform2VCdCDE", key);
+            Assert.NotEqual(customKey, key);
+            var variedKey = key;
 
             cv = new CachedVary() {
                 Params = new string[] { "form1", "Form2" },
@@ -310,7 +316,7 @@ namespace Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test {
                 ContentEncodings = new string[] { "gzip", "deflate" }
             };
             key = ocHelper.CreateOutputCachedItemKey(cv);
-            Assert.Equal("a1test.aspxHQNquery1V1Nquery2VaBFNform1V1Nform2VCdCDEgzip", key);
+            Assert.NotEqual(variedKey, key);
         }
 
         [Fact]
@@ -340,11 +346,13 @@ namespace Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test {
             var ocHelper = new OutputCacheHelper(context, cacheUtilMoq.Object);
 
             var key = ocHelper.CreateOutputCachedItemKey(null);
-            Assert.Equal("a2test.aspx", key);
+            Assert.StartsWith("oc:v2:", key);
+            var baseKey = key;
 
             var cv = new CachedVary() { VaryByCustom = "CustomVary" };
             key = ocHelper.CreateOutputCachedItemKey(cv);
-            Assert.Equal("a2test.aspxHQFCNCustomVaryVUtilCustomVaryDE", key);
+            Assert.NotEqual(baseKey, key);
+            var customKey = key;
 
             cv = new CachedVary() {
                 Headers = new string[] { "AUTH_TYPE", "HTTP_HOST" },
@@ -352,7 +360,8 @@ namespace Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test {
                 VaryByAllParams = true
             };
             key = ocHelper.CreateOutputCachedItemKey(cv);
-            Assert.Equal("a2test.aspxHNAUTH_TYPEVBasicNHTTP_HOSTVlocalhostQNquery1V1Nquery2VaBFCDE", key);
+            Assert.NotEqual(customKey, key);
+            var variedKey = key;
 
             cv = new CachedVary() {
                 Params = new string[] { "form1", "Form2" },
@@ -360,7 +369,311 @@ namespace Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test {
                 ContentEncodings = new string[] { "gzip", "deflate" }
             };
             key = ocHelper.CreateOutputCachedItemKey(cv);
-            Assert.Equal("a2test.aspxHQNquery1V1Nquery2VaBFCDEgzip", key);
+            Assert.NotEqual(variedKey, key);
+        }
+
+        [Fact]
+        public void CreateOutputCachedItemKey_Distinguishes_Ambiguous_Vary_Values() {
+            var cachedVary = new CachedVary { Params = new[] { "a", "b" } };
+
+            var first = CreateKeyForQuery(
+                cachedVary,
+                new NameValueCollection { { "a", "xNbVy" }, { "b", "z" } });
+            var second = CreateKeyForQuery(
+                cachedVary,
+                new NameValueCollection { { "a", "x" }, { "b", "yNbVz" } });
+
+            Assert.NotEqual(first, second);
+        }
+
+        [Fact]
+        public void CreateOutputCachedItemKey_Distinguishes_Missing_And_Literal_Null_Sentinel() {
+            var cachedVary = new CachedVary { Params = new[] { "a" } };
+
+            var missing = CreateKeyForQuery(cachedVary, new NameValueCollection());
+            var literal = CreateKeyForQuery(
+                cachedVary,
+                new NameValueCollection { { "a", "+n+" } });
+
+            Assert.NotEqual(missing, literal);
+        }
+
+        [Fact]
+        public void CreateOutputCachedItemKey_Distinguishes_Repeated_And_CommaJoined_Values() {
+            var cachedVary = new CachedVary { Params = new[] { "a" } };
+            var repeatedValues = new NameValueCollection();
+            repeatedValues.Add("a", "x");
+            repeatedValues.Add("a", "y");
+            var commaJoinedValue = new NameValueCollection { { "a", "x,y" } };
+
+            var repeated = CreateKeyForQuery(cachedVary, repeatedValues);
+            var commaJoined = CreateKeyForQuery(cachedVary, commaJoinedValue);
+
+            Assert.NotEqual(repeated, commaJoined);
+        }
+
+        [Fact]
+        public void CreateOutputCachedItemKey_Distinguishes_Cosmos_Sanitized_Characters() {
+            var cachedVary = new CachedVary { Params = new[] { "a" } };
+
+            var questionMark = CreateKeyForQuery(
+                cachedVary,
+                new NameValueCollection { { "a", "?" } });
+            var underscore = CreateKeyForQuery(
+                cachedVary,
+                new NameValueCollection { { "a", "_" } });
+
+            Assert.NotEqual(questionMark, underscore);
+            Assert.DoesNotContain("/", questionMark);
+            Assert.DoesNotContain("?", questionMark);
+            Assert.DoesNotContain("#", questionMark);
+        }
+
+        [Fact]
+        public void CreateOutputCachedItemKey_Includes_Vary_Policy_Structure() {
+            var query = new NameValueCollection { { "a", "value" } };
+
+            var explicitParam = CreateKeyForQuery(
+                new CachedVary { Params = new[] { "a" } },
+                query);
+            var allParams = CreateKeyForQuery(
+                new CachedVary { VaryByAllParams = true },
+                query);
+            var gzip = CreateKeyForQuery(
+                new CachedVary {
+                    Params = new[] { "a" },
+                    ContentEncodings = new[] { "gzip" }
+                },
+                query);
+
+            Assert.NotEqual(explicitParam, allParams);
+            Assert.NotEqual(explicitParam, gzip);
+        }
+
+        [Fact]
+        public void CreateOutputCachedItemKey_Rejects_Oversized_CanonicalId() {
+            var cachedVary = new CachedVary { Params = new[] { "a" } };
+            var query = new NameValueCollection {
+                { "a", new string('x', OutputCacheKeyWriter.MaxCanonicalIdLength) }
+            };
+
+            Assert.Null(CreateKeyForQuery(cachedVary, query));
+        }
+
+        [Fact]
+        public void CreateOutputCachedItemKey_Rejects_Post_Body_Above_CanonicalId_Limit() {
+            var body = new byte[OutputCacheKeyWriter.MaxCanonicalIdLength];
+            var request = new Mock<HttpRequestBase>();
+            request.Setup(r => r.Path).Returns("test.aspx");
+            request.Setup(r => r.HttpMethod).Returns(HttpMethods_POST);
+            request.Setup(r => r.ServerVariables).Returns(new NameValueCollection());
+            request.Setup(r => r.QueryString).Returns(new NameValueCollection());
+            request.Setup(r => r.Form).Returns(new NameValueCollection());
+            request.Setup(r => r.Headers).Returns(new NameValueCollection());
+            request.Setup(r => r.ContentLength).Returns(body.Length);
+            request.Setup(r => r.InputStream).Returns(new MemoryStream(body));
+            var context = CreateHttpContextBase(request.Object);
+
+            var key = new OutputCacheHelper(
+                context,
+                new Mock<IOutputCacheUtility>().Object).CreateOutputCachedItemKey(
+                    new CachedVary { VaryByAllParams = true });
+
+            Assert.Null(key);
+        }
+
+        [Fact]
+        public void CreateOutputCachedItemKey_Reads_Complete_Post_Body_And_Restores_Position() {
+            var body = new byte[] { 1, 2, 3, 4 };
+            var inputStream = new MemoryStream(body);
+            inputStream.Position = inputStream.Length;
+            var request = new Mock<HttpRequestBase>();
+            request.Setup(r => r.Path).Returns("test.aspx");
+            request.Setup(r => r.HttpMethod).Returns(HttpMethods_POST);
+            request.Setup(r => r.ServerVariables).Returns(new NameValueCollection());
+            request.Setup(r => r.QueryString).Returns(new NameValueCollection());
+            request.Setup(r => r.Form).Returns(new NameValueCollection());
+            request.Setup(r => r.Headers).Returns(new NameValueCollection());
+            request.Setup(r => r.ContentLength).Returns(body.Length);
+            request.Setup(r => r.InputStream).Returns(inputStream);
+            var helper = new OutputCacheHelper(
+                CreateHttpContextBase(request.Object),
+                new Mock<IOutputCacheUtility>().Object);
+
+            var keyFromEnd = helper.CreateOutputCachedItemKey(
+                new CachedVary { VaryByAllParams = true });
+
+            Assert.Equal(inputStream.Length, inputStream.Position);
+
+            inputStream.Position = 0;
+            var keyFromStart = helper.CreateOutputCachedItemKey(
+                new CachedVary { VaryByAllParams = true });
+
+            Assert.Equal(keyFromStart, keyFromEnd);
+            Assert.Equal(0, inputStream.Position);
+        }
+
+        [Fact]
+        public async Task GetBaseCacheEntryAsync_Rejects_Mismatched_CanonicalId() {
+            var request = CreateKeyRequest("test.aspx", new NameValueCollection());
+            var context = CreateHttpContextBase(request.Object);
+            var provider = new Mock<OutputCacheProviderAsync>();
+            var utility = new Mock<IOutputCacheUtility>();
+            utility.Setup(u => u.GetOutputCacheProvider(context, null)).Returns(provider.Object);
+            var helper = new OutputCacheHelper(context, utility.Object);
+            var hashedKey = helper.CreateOutputCachedItemKey(null);
+            provider.Setup(p => p.GetAsync(hashedKey)).ReturnsAsync(
+                new VerifiedCacheEntry("different", new CachedRawResponse()));
+
+            var result = await helper.GetBaseCacheEntryAsync();
+
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task GetBaseCacheEntryAsync_Returns_Exactly_Matched_Entry() {
+            var request = CreateKeyRequest("test.aspx", new NameValueCollection());
+            var context = CreateHttpContextBase(request.Object);
+            var provider = new Mock<OutputCacheProviderAsync>();
+            var utility = new Mock<IOutputCacheUtility>();
+            utility.Setup(u => u.GetOutputCacheProvider(context, null)).Returns(provider.Object);
+            var helper = new OutputCacheHelper(context, utility.Object);
+            OutputCacheKey key;
+            var writer = new OutputCacheKeyWriter();
+            writer.WriteToken('G');
+            writer.WriteString("test.aspx");
+            writer.WriteToken('0');
+            Assert.True(writer.TryGetKey(out key));
+            var value = new CachedRawResponse();
+            provider.Setup(p => p.GetAsync(key.HashedKey)).ReturnsAsync(
+                new VerifiedCacheEntry(key.CanonicalId, value));
+
+            var result = await helper.GetBaseCacheEntryAsync();
+
+            Assert.Same(value, result.CacheValue);
+            Assert.Equal(key.HashedKey, result.CacheKey);
+        }
+
+        [Fact]
+        public async Task GetAsCacheVaryAsync_Probes_Each_Acceptable_Content_Encoding() {
+            var cachedVary = new CachedVary {
+                CachedVaryId = Guid.NewGuid(),
+                ContentEncodings = new[] { "deflate", "gzip" }
+            };
+            var lookupRequest = CreateKeyRequest("test.aspx", new NameValueCollection());
+            lookupRequest.Object.Headers[AcceptEncodingHeaderName] =
+                "gzip;q=0.5, deflate;q=0.4";
+            var lookupContext = CreateHttpContextBase(lookupRequest.Object);
+            var provider = new Mock<OutputCacheProviderAsync>();
+            var lookupUtility = new Mock<IOutputCacheUtility>();
+            lookupUtility.Setup(u => u.GetOutputCacheProvider(lookupContext, null))
+                .Returns(provider.Object);
+            var lookupHelper = new OutputCacheHelper(lookupContext, lookupUtility.Object);
+            var gzipKey = lookupHelper.CreateOutputCacheKey(cachedVary, "gzip");
+            var deflateKey = lookupHelper.CreateOutputCacheKey(cachedVary, "deflate");
+            var response = new CachedRawResponse {
+                CachedVaryId = cachedVary.CachedVaryId
+            };
+            provider.Setup(p => p.GetAsync(gzipKey.HashedKey))
+                .ReturnsAsync((object)null);
+            provider.Setup(p => p.GetAsync(deflateKey.HashedKey))
+                .ReturnsAsync(new VerifiedCacheEntry(deflateKey.CanonicalId, response));
+
+            var result = await lookupHelper.GetAsCacheVaryAsync(cachedVary);
+
+            Assert.Same(response, result);
+            provider.Verify(p => p.GetAsync(gzipKey.HashedKey), Times.Once);
+            provider.Verify(p => p.GetAsync(deflateKey.HashedKey), Times.Once);
+        }
+
+        [Fact]
+        public void GetResponseContentEncoding_Prefers_Response_Then_Request() {
+            var request = CreateKeyRequest("test.aspx", new NameValueCollection());
+            request.Object.Headers[AcceptEncodingHeaderName] = "gzip";
+            var response = new Mock<HttpResponseBase>();
+            var responseHeaders = new NameValueCollection {
+                { ContentEncodingHeaderName, "deflate" }
+            };
+            response.Setup(r => r.Headers).Returns(responseHeaders);
+            var context = CreateHttpContextBase(request.Object, response.Object);
+            var helper = new OutputCacheHelper(
+                context, new Mock<IOutputCacheUtility>().Object);
+            var configured = new[] { "gzip", "deflate" };
+
+            Assert.Equal("deflate", helper.GetResponseContentEncoding(configured));
+
+            responseHeaders.Remove(ContentEncodingHeaderName);
+
+            Assert.Equal("gzip", helper.GetResponseContentEncoding(configured));
+        }
+
+        [Fact]
+        public async Task GetBaseCacheEntryAsync_Uses_Legacy_Key_Only_When_Enabled() {
+            var request = CreateKeyRequest("test.aspx", new NameValueCollection());
+            var context = CreateHttpContextBase(request.Object);
+            var provider = new Mock<OutputCacheProviderAsync>();
+            var utility = new Mock<IOutputCacheUtility>();
+            utility.Setup(u => u.GetOutputCacheProvider(context, null)).Returns(provider.Object);
+            var legacyValue = new CachedRawResponse();
+            provider.Setup(p => p.GetAsync("a2test.aspx")).ReturnsAsync(legacyValue);
+
+            var disabled = await new OutputCacheHelper(
+                context, utility.Object, false).GetBaseCacheEntryAsync();
+            var enabled = await new OutputCacheHelper(
+                context, utility.Object, true).GetBaseCacheEntryAsync();
+
+            Assert.Null(disabled);
+            Assert.Same(legacyValue, enabled.CacheValue);
+            Assert.Equal("a2test.aspx", enabled.CacheKey);
+        }
+
+        [Fact]
+        public async Task GetAsCacheVaryAsync_Uses_Legacy_Varied_Key_When_Enabled() {
+            var queryString = new NameValueCollection { { "p", "x" } };
+            var request = CreateKeyRequest("test.aspx", queryString);
+            var context = CreateHttpContextBase(request.Object);
+            var provider = new Mock<OutputCacheProviderAsync>();
+            var utility = new Mock<IOutputCacheUtility>();
+            utility.Setup(u => u.GetOutputCacheProvider(context, null)).Returns(provider.Object);
+            var cachedVary = new CachedVary {
+                CachedVaryId = Guid.NewGuid(),
+                Params = new[] { "p" }
+            };
+            var legacyResponse = new CachedRawResponse {
+                CachedVaryId = cachedVary.CachedVaryId
+            };
+            provider.Setup(p => p.GetAsync("a2test.aspx")).ReturnsAsync(cachedVary);
+            provider.Setup(p => p.GetAsync("a2test.aspxHQNpVxFCDE"))
+                .ReturnsAsync(legacyResponse);
+            var helper = new OutputCacheHelper(context, utility.Object, true);
+
+            var baseLookup = await helper.GetBaseCacheEntryAsync();
+            var variedLookup = await helper.GetAsCacheVaryAsync(
+                (CachedVary)baseLookup.CacheValue);
+
+            Assert.Same(cachedVary, baseLookup.CacheValue);
+            Assert.Equal("a2test.aspx", baseLookup.CacheKey);
+            Assert.Same(legacyResponse, variedLookup);
+        }
+
+        [Theory]
+        [InlineData(null, false, false)]
+        [InlineData("", false, false)]
+        [InlineData("false", true, false)]
+        [InlineData("true", false, true)]
+        [InlineData("TRUE", false, true)]
+        [InlineData("yes", false, false)]
+        [InlineData("yes", true, true)]
+        public void AppSettings_GetBooleanValue_Parses_Values_Or_Uses_Default(
+            string value, bool defaultValue, bool expected) {
+
+            var settings = new NameValueCollection {
+                { "setting", value }
+            };
+
+            Assert.Equal(
+                expected,
+                AppSettings.GetBooleanValue(settings, "setting", defaultValue));
         }
 
         [Fact]
@@ -573,6 +886,30 @@ namespace Microsoft.AspNet.OutputCache.OutputCacheModuleAsync.Test {
             cacheUtilMoq.Setup(util => util.GetCachePolicyFromHttpContextBase(httpContext)).Returns(policy);
 
             return cacheUtilMoq.Object;
+        }
+
+        private string CreateKeyForQuery(
+            CachedVary cachedVary,
+            NameValueCollection queryString) {
+
+            var request = CreateKeyRequest("test.aspx", queryString);
+            var context = CreateHttpContextBase(request.Object);
+            return new OutputCacheHelper(context, new Mock<IOutputCacheUtility>().Object)
+                .CreateOutputCachedItemKey(cachedVary);
+        }
+
+        private Mock<HttpRequestBase> CreateKeyRequest(
+            string path,
+            NameValueCollection queryString) {
+
+            var request = new Mock<HttpRequestBase>();
+            request.Setup(r => r.Path).Returns(path);
+            request.Setup(r => r.HttpMethod).Returns(HttpMethods_GET);
+            request.Setup(r => r.ServerVariables).Returns(new NameValueCollection());
+            request.Setup(r => r.QueryString).Returns(queryString);
+            request.Setup(r => r.Form).Returns(new NameValueCollection());
+            request.Setup(r => r.Headers).Returns(new NameValueCollection());
+            return request;
         }
 
         private HttpContextBase CreateHttpContextBase(NameValueCollection requestHeaders = null) {
